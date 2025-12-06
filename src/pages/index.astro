@@ -1,8 +1,18 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import DuoDashApp from '../components/DuoDashApp';
+
+// 在服务端读取环境变量
+const duoUsername = import.meta.env.DUOLINGO_USERNAME || '';
+const duoJwt = import.meta.env.DUOLINGO_JWT || '';
+const hasCredentials = !!(duoUsername && duoJwt && duoUsername !== 'your_duolingo_username' && duoJwt !== 'your_jwt_token_here');
 ---
 
 <Layout title="DuoDash - 多邻国数据仪表盘">
-  <DuoDashApp client:load />
+  <DuoDashApp 
+    client:load 
+    serverUsername={duoUsername}
+    serverJwt={duoJwt}
+    serverHasCredentials={hasCredentials}
+  />
 </Layout>

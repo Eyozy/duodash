@@ -1,143 +1,40 @@
-import { GoogleGenAI } from "@google/genai";
-import type { UserData, AiConfig, AiProvider } from "../types";
+import type { UserData } from "../types";
 
-const getEnvConfig = (): AiConfig => {
-  const provider = (import.meta.env.AI_PROVIDER || 'gemini') as AiProvider;
-  const model = import.meta.env.AI_MODEL || 'gemini-2.5-flash';
-  const baseUrl = import.meta.env.AI_BASE_URL || '';
-  
-  let apiKey = '';
-  switch (provider) {
-    case 'gemini':
-      apiKey = import.meta.env.GEMINI_API_KEY || '';
-      break;
-    case 'openrouter':
-      apiKey = import.meta.env.OPENROUTER_API_KEY || '';
-      break;
-    case 'deepseek':
-      apiKey = import.meta.env.DEEPSEEK_API_KEY || '';
-      break;
-    case 'siliconflow':
-      apiKey = import.meta.env.SILICONFLOW_API_KEY || '';
-      break;
-    case 'moonshot':
-      apiKey = import.meta.env.MOONSHOT_API_KEY || '';
-      break;
-    case 'custom':
-      apiKey = import.meta.env.CUSTOM_API_KEY || '';
-      break;
-  }
-  
-  return { provider, apiKey, model, baseUrl };
-};
+export interface AiResponse {
+  analysis: string;
+  provider: string;
+  model: string;
+}
 
-const getGoogleClient = (apiKey: string, baseUrl?: string) => {
-  const options: any = { apiKey };
-  if (baseUrl && baseUrl.trim().length > 0) {
-    options.baseUrl = baseUrl;
-  }
-  return new GoogleGenAI(options);
-};
-
-const getDefaultEndpoint = (provider: AiProvider): string => {
-  const endpoints: Record<AiProvider, string> = {
-    gemini: '',
-    openrouter: 'https://openrouter.ai/api/v1',
-    deepseek: 'https://api.deepseek.com',
-    siliconflow: 'https://api.siliconflow.cn/v1',
-    moonshot: 'https://api.moonshot.cn/v1',
-    custom: '',
-  };
-  return endpoints[provider] || '';
-};
-
-const callOpenAiCompatibleApi = async (
-  config: AiConfig,
-  messages: { role: string; content: string }[]
-): Promise<string> => {
-  let endpoint = config.baseUrl || getDefaultEndpoint(config.provider);
-
-  if (endpoint && !endpoint.endsWith('/chat/completions')) {
-    endpoint = endpoint.replace(/\/$/, '');
-    endpoint = `${endpoint}/chat/completions`;
-  }
-
-  if (!endpoint) {
-    throw new Error('未配置 API 端点');
-  }
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${config.apiKey}`,
-      ...(config.provider === 'openrouter' ? {
-        "HTTP-Referer": typeof window !== 'undefined' ? window.location.origin : '',
-        "X-Title": "DuoDash"
-      } : {})
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages: messages,
-      temperature: 0.7,
-    }),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`API Error ${response.status}: ${errText}`);
-  }
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || "AI 返回了空内容。";
-};
-
-export const analyzeUserStats = async (userData: UserData, config?: AiConfig): Promise<string> => {
-  const envConfig = getEnvConfig();
-  const effectiveConfig: AiConfig = config || envConfig;
-  
-  if (!effectiveConfig.apiKey) {
-    return "咕咕！未配置 AI API Key，请在环境变量中设置。";
-  }
-
-  const systemPrompt = `
-你现在是多邻国的那只绿色猫头鹰 Duo。你非常执着于用户的连胜纪录（Streak），性格有点被动攻击型（Passive-aggressive），但也真心希望用户学习。
-请用中文对该用户的学习进度进行简短、有力且略带幽默（或毒舌）的点评。
-
-具体要求：
-1. 如果用户注册了很多年（比如超过 3 年）但连胜很低，狠狠地吐槽他们"三天打鱼两天晒网"。
-2. 如果是 Super 会员，可以稍微客气一点点，或者说"既然付了钱就别浪费"。
-3. 如果连胜很高（>100），给予极高赞赏，甚至表现出一点"害怕"或"尊敬"。
-4. 提到他们最擅长的语言。
-5. 结尾必须是一句经典的"多邻国式"威胁或鼓励。
-6. 全文保持在 150 字以内。
-  `;
-
-  const userPrompt = `
-这是用户的学习数据（不要在回复中提及任何用户身份信息）：
-- 注册时长：${userData.accountAgeDays} 天
-- 会员状态：${userData.isPlus ? "Super 会员" : "免费用户"}
-- 连胜天数：${userData.streak} 天
-- 总经验值：${userData.totalXp} XP
-- 课程数量：${userData.courses.length} 门
-- 当前学习：${userData.learningLanguage}
-  `;
-
+export const analyzeUserStats = async (userData: UserData): Promise<string> => {
   try {
-    if (effectiveConfig.provider === 'gemini') {
-      const ai = getGoogleClient(effectiveConfig.apiKey, effectiveConfig.baseUrl);
-      const response = await ai.models.generateContent({
-        model: effectiveConfig.model || 'gemini-2.5-flash',
-        contents: `${systemPrompt}\n\n${userPrompt}`,
-      });
-      return response.text || "咕咕！我没看清你的数据，但快去学习，不然...";
-    } else {
-      return await callOpenAiCompatibleApi(effectiveConfig, [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ]);
+    const response = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userData })
+    });
+
+    if (!response.ok) {
+      return "咕咕！连接 AI 服务失败，请稍后重试。";
     }
+
+    const data: AiResponse = await response.json();
+    return data.analysis;
   } catch (error: any) {
-    return `咕咕！连接出错：${error.message}。请检查环境变量中的 API 配置。`;
+    return `咕咕！连接出错：${error.message}`;
+  }
+};
+
+export const getAiInfo = async (): Promise<{ provider: string; model: string }> => {
+  try {
+    const response = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userData: { accountAgeDays: 0, isPlus: false, streak: 0, totalXp: 0, courses: [], learningLanguage: 'Unknown' } })
+    });
+    const data: AiResponse = await response.json();
+    return { provider: data.provider, model: data.model };
+  } catch {
+    return { provider: 'unknown', model: 'unknown' };
   }
 };

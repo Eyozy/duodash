@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { UserData } from '../types';
-import { analyzeUserStats } from '../services/geminiService';
+import { analyzeUserStats, getAiInfo } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
 
 interface AiCoachProps {
@@ -10,19 +10,22 @@ interface AiCoachProps {
 export const AiCoach: React.FC<AiCoachProps> = ({ userData }) => {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [aiInfo, setAiInfo] = useState({ provider: 'loading...', model: '' });
 
   useEffect(() => {
     const fetchAnalysis = async () => {
       setLoading(true);
       const result = await analyzeUserStats(userData);
       setAnalysis(result);
+      const info = await getAiInfo();
+      setAiInfo(info);
       setLoading(false);
     };
     if (userData) fetchAnalysis();
   }, [userData.streak, userData.totalXp, userData.username]);
 
-  const providerName = import.meta.env.AI_PROVIDER || 'gemini';
-  const modelName = import.meta.env.AI_MODEL || 'gemini-2.5-flash';
+  const providerName = aiInfo.provider;
+  const modelName = aiInfo.model;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border-2 border-b-4 border-gray-200 overflow-hidden h-full flex flex-col">

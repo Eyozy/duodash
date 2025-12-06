@@ -71,31 +71,29 @@ const DEMO_DATA: UserData = {
   nextLesson: { skillTitle: "Abstract Objects 1", skillUrl: "Abstract-Objects-1", lessonNumber: 1 },
 };
 
-// 从环境变量获取配置
-const getEnvCredentials = () => {
-  const username = import.meta.env.DUOLINGO_USERNAME || '';
-  const jwt = import.meta.env.DUOLINGO_JWT || '';
-  const hasCredentials = !!(username && jwt && username !== 'your_duolingo_username' && jwt !== 'your_jwt_token_here');
-  return { username, jwt, hasCredentials };
-};
+interface DuoDashAppProps {
+  serverUsername?: string;
+  serverJwt?: string;
+  serverHasCredentials?: boolean;
+}
 
-// 检查是否配置了环境变量（用于初始状态）
-const envCredentials = getEnvCredentials();
-
-export const DuoDashApp: React.FC = () => {
+export const DuoDashApp: React.FC<DuoDashAppProps> = ({ 
+  serverUsername = '', 
+  serverJwt = '', 
+  serverHasCredentials = false 
+}) => {
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(envCredentials.hasCredentials);
+  const [loading, setLoading] = useState(serverHasCredentials);
   const [error, setError] = useState<string | null>(null);
   const [autoLoaded, setAutoLoaded] = useState(false);
 
-  // 自动从环境变量加载数据
+  // 自动从服务端传入的凭据加载数据
   useEffect(() => {
-    const { username, jwt, hasCredentials } = getEnvCredentials();
-    if (hasCredentials && !autoLoaded) {
+    if (serverHasCredentials && !autoLoaded) {
       setAutoLoaded(true);
-      handleConnect(username, jwt);
+      handleConnect(serverUsername, serverJwt);
     }
-  }, []);
+  }, [serverHasCredentials, serverUsername, serverJwt]);
 
   const handleConnect = async (username: string, jwt: string) => {
     setLoading(true);
@@ -124,7 +122,7 @@ export const DuoDashApp: React.FC = () => {
   const handleDemo = () => { setUserData(DEMO_DATA); };
 
   // 如果配置了环境变量且正在加载，显示加载界面
-  if (!userData && envCredentials.hasCredentials && loading) {
+  if (!userData && serverHasCredentials && loading) {
     return (
       <div className="min-h-screen bg-[#235390] flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-xl p-12 text-center">
@@ -137,7 +135,7 @@ export const DuoDashApp: React.FC = () => {
   }
 
   // 如果配置了环境变量但加载失败，显示错误
-  if (!userData && envCredentials.hasCredentials && error) {
+  if (!userData && serverHasCredentials && error) {
     return (
       <div className="min-h-screen bg-[#235390] flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-xl p-12 text-center max-w-md">
