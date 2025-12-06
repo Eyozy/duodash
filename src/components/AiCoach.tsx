@@ -22,7 +22,7 @@ export const AiCoach: React.FC<AiCoachProps> = ({ userData }) => {
       setLoading(false);
     };
     if (userData) fetchAnalysis();
-  }, [userData.streak, userData.totalXp, userData.username]);
+  }, [userData.streak, userData.totalXp]);
 
   const providerName = aiInfo.provider;
   const modelName = aiInfo.model;

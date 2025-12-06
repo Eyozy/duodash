@@ -26,7 +26,6 @@ export interface InventoryItem {
 }
 
 export interface FriendRanking {
-  username: string;
   displayName: string;
   xp: number;
   rank: number;
@@ -53,9 +52,6 @@ export interface DailyStats {
 }
 
 export interface UserData {
-  username: string;
-  fullname: string;
-  avatarUrl: string;
   streak: number;
   totalXp: number;
   gems: number;

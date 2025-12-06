@@ -20,11 +20,6 @@ const LEAGUE_TIERS = [
 export const transformDuolingoData = (rawData: DuolingoRawUser): UserData => {
   const rawAny = rawData as any;
   
-  const username = rawData.username || "Unknown";
-  const fullname = rawData.name || rawData.fullname || username;
-  const rawPicture = rawData.picture || rawData.avatar || "//ssl.gstatic.com/images/branding/product/1x/avatar_circle_blue_512dp.png";
-  const avatarUrl = rawPicture.startsWith('//') ? `https:${rawPicture}` : rawPicture;
-  
   const streak = rawData.site_streak !== undefined ? rawData.site_streak : rawData.streak;
   // 宝石：检查多个位置（顶层、tracking_properties）
   const gems = rawAny.gems || rawAny.tracking_properties?.gems || rawAny.lingots || rawAny.rupees || 0;
@@ -426,14 +421,13 @@ export const transformDuolingoData = (rawData: DuolingoRawUser): UserData => {
     sessionTime = rawAny.trackingProperties.total_session_time;
   }
   
-  // 好友排行
+  // 好友排行 - 匿名化处理
   const friendsRanking: FriendRanking[] = [];
   const rankingSource = rawAny.points_ranking_data ?? rawAny.trackingProperties?.leaderboard_friends;
   if (rankingSource && Array.isArray(rankingSource)) {
     rankingSource.forEach((f: any, idx: number) => {
       friendsRanking.push({
-        username: f.username || f.userId || '',
-        displayName: f.display_name || f.displayName || f.fullname || f.username || '',
+        displayName: idx === 0 ? '你' : `用户 ${idx + 1}`,
         xp: f.points_data?.total || f.total_xp || f.totalXp || f.xp || 0,
         rank: idx + 1
       });
@@ -481,7 +475,7 @@ export const transformDuolingoData = (rawData: DuolingoRawUser): UserData => {
   }
 
   return {
-    username, fullname, avatarUrl, streak, totalXp, gems,
+    streak, totalXp, gems,
     league: leagueName, leagueTier: tierIndex, courses, dailyXpHistory,
     dailyTimeHistory, yearlyXpHistory,
     learningLanguage, creationDate: creationDateStr, accountAgeDays,

@@ -8,9 +8,6 @@ import { fetchDuolingoData, transformDuolingoData } from '../services/duolingoSe
 const CHART_COLORS = ['#58cc02', '#ce82ff', '#ff9600', '#ff4b4b', '#1cb0f6', '#ffc800'];
 
 const DEMO_DATA: UserData = {
-  username: "SteveThePolyglot",
-  fullname: "Steve O. (演示)",
-  avatarUrl: "https://placehold.co/150x150/58cc02/white?text=S",
   streak: 2045,
   totalXp: 202663,
   gems: 15400,
@@ -64,36 +61,51 @@ const DEMO_DATA: UserData = {
     { name: "Colors", strength: 0.92, learned: true, mastered: false },
   ],
   friendsRanking: [
-    { username: "SteveThePolyglot", displayName: "Steve O.", xp: 202663, rank: 1 },
-    { username: "maria_learns", displayName: "Maria", xp: 156000, rank: 2 },
-    { username: "john_doe", displayName: "John", xp: 98000, rank: 3 },
+    { displayName: "你", xp: 202663, rank: 1 },
+    { displayName: "用户 2", xp: 156000, rank: 2 },
+    { displayName: "用户 3", xp: 98000, rank: 3 },
   ],
   nextLesson: { skillTitle: "Abstract Objects 1", skillUrl: "Abstract-Objects-1", lessonNumber: 1 },
 };
 
-interface DuoDashAppProps {
-  serverUsername?: string;
-  serverJwt?: string;
-  serverHasCredentials?: boolean;
-}
-
-export const DuoDashApp: React.FC<DuoDashAppProps> = ({ 
-  serverUsername = '', 
-  serverJwt = '', 
-  serverHasCredentials = false 
-}) => {
+export const DuoDashApp: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(serverHasCredentials);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [autoLoaded, setAutoLoaded] = useState(false);
+  const [isConfigured, setIsConfigured] = useState(false);
+  const [configChecked, setConfigChecked] = useState(false);
 
-  // 自动从服务端传入的凭据加载数据
+  // 检查是否配置了环境变量，并自动加载数据
   useEffect(() => {
-    if (serverHasCredentials && !autoLoaded) {
-      setAutoLoaded(true);
-      handleConnect(serverUsername, serverJwt);
-    }
-  }, [serverHasCredentials, serverUsername, serverJwt]);
+    const checkAndLoad = async () => {
+      try {
+        // 检查配置
+        const configRes = await fetch('/api/config');
+        const configData = await configRes.json();
+        setIsConfigured(configData.configured);
+        setConfigChecked(true);
+
+        if (configData.configured) {
+          // 自动加载数据
+          const dataRes = await fetch('/api/data');
+          const result = await dataRes.json();
+          
+          if (result.data) {
+            const transformed = transformDuolingoData(result.data);
+            setUserData(transformed);
+          } else {
+            setError(result.error || '加载数据失败');
+          }
+        }
+      } catch (err: any) {
+        setError('连接服务器失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAndLoad();
+  }, []);
 
   const handleConnect = async (username: string, jwt: string) => {
     setLoading(true);
@@ -121,8 +133,8 @@ export const DuoDashApp: React.FC<DuoDashAppProps> = ({
 
   const handleDemo = () => { setUserData(DEMO_DATA); };
 
-  // 如果配置了环境变量且正在加载，显示加载界面
-  if (!userData && serverHasCredentials && loading) {
+  // 正在检查配置或加载数据
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#235390] flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-xl p-12 text-center">
@@ -135,15 +147,15 @@ export const DuoDashApp: React.FC<DuoDashAppProps> = ({
   }
 
   // 如果配置了环境变量但加载失败，显示错误
-  if (!userData && serverHasCredentials && error) {
+  if (!userData && isConfigured && error) {
     return (
       <div className="min-h-screen bg-[#235390] flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-xl p-12 text-center max-w-md">
           <div className="text-6xl mb-6">😢</div>
           <h2 className="text-2xl font-bold text-gray-700 mb-4">连接失败</h2>
           <p className="text-red-500 mb-6">{error}</p>
-          <p className="text-gray-500 text-sm mb-6">请检查 .env.local 中的 DUOLINGO_USERNAME 和 DUOLINGO_JWT 配置是否正确</p>
-          <button onClick={() => { setError(null); setAutoLoaded(false); }} 
+          <p className="text-gray-500 text-sm mb-6">请检查环境变量中的 DUOLINGO_USERNAME 和 DUOLINGO_JWT 配置是否正确</p>
+          <button onClick={() => window.location.reload()} 
             className="bg-[#58cc02] text-white font-bold py-3 px-6 rounded-xl hover:bg-[#4caf00]">
             重试
           </button>
@@ -365,13 +377,13 @@ export const DuoDashApp: React.FC<DuoDashAppProps> = ({
                 <h3 className="text-gray-700 font-bold text-xl mb-4">好友排行榜</h3>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {userData.friendsRanking.map((friend, idx) => (
-                    <div key={idx} className={`flex items-center justify-between p-3 rounded-xl ${friend.username === userData.username ? 'bg-[#58cc02]/10 border border-[#58cc02]' : 'bg-gray-50'}`}>
+                    <div key={idx} className={`flex items-center justify-between p-3 rounded-xl ${friend.displayName === '你' ? 'bg-[#58cc02]/10 border border-[#58cc02]' : 'bg-gray-50'}`}>
                       <div className="flex items-center gap-3">
                         <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${idx < 3 ? 'bg-yellow-400 text-white' : 'bg-gray-200 text-gray-600'}`}>
                           {friend.rank}
                         </span>
                         <span className="font-bold text-gray-700">{friend.displayName}</span>
-                        {friend.username === userData.username && <span className="text-xs bg-[#58cc02] text-white px-2 py-0.5 rounded">你</span>}
+                        {friend.displayName === '你' && <span className="text-xs bg-[#58cc02] text-white px-2 py-0.5 rounded">你</span>}
                       </div>
                       <span className="font-bold text-gray-600">{friend.xp.toLocaleString()} XP</span>
                     </div>
