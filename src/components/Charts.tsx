@@ -79,15 +79,25 @@ interface LanguagePieChartProps {
   courses: Course[];
 }
 
-// 热力图组件 - 支持多年
+// 热力图组件 - 支持多年和季度视图
 interface HeatmapChartProps {
   data: { date: string; xp: number; time?: number }[];
-  totalXp?: number; // 从 API 获取的总 XP
+  totalXp?: number;
 }
 
-export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data, totalXp: apiTotalXp }) => {
+export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
   const [selectedYear, setSelectedYear] = React.useState<number>(new Date().getFullYear());
+  const [selectedQuarter, setSelectedQuarter] = React.useState<number>(Math.ceil((new Date().getMonth() + 1) / 3));
   const [selectedDay, setSelectedDay] = React.useState<{ date: string; xp: number; time?: number; x: number; y: number } | null>(null);
+  const [isMobile, setIsMobile] = React.useState<boolean>(false);
+  
+  // 检测屏幕宽度
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   // 创建日期到 XP 和时间的映射
   const xpMap = new Map<string, number>();
@@ -108,23 +118,34 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data, totalXp: apiTo
   const sortedYears = Array.from(years).sort((a, b) => b - a);
   if (sortedYears.length === 0) sortedYears.push(new Date().getFullYear());
   
-  // 获取选中年份的最大 XP
-  const yearData = data.filter(d => new Date(d.date).getFullYear() === selectedYear);
-  const maxXp = Math.max(...yearData.map(d => d.xp), 50);
-  
-  // 生成选中年份从 1 月 1 日到 12 月 31 日（或今天）的所有日期
-  const today = new Date();
-  const startOfYear = new Date(selectedYear, 0, 1);
-  // 始终显示到年底，确保网格完整（针对用户反馈的 12 月缺失问题）
-  const endOfYear = new Date(selectedYear, 11, 31);
-  
   // 辅助函数：生成本地日期字符串 YYYY-MM-DD
   const toLocalDateStr = (d: Date) => 
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+  // 根据是否移动端决定日期范围
+  const getDateRange = () => {
+    if (isMobile) {
+      // 季度视图：Q1=1-3 月，Q2=4-6 月，Q3=7-9 月，Q4=10-12 月
+      const startMonth = (selectedQuarter - 1) * 3;
+      const endMonth = startMonth + 2;
+      return {
+        start: new Date(selectedYear, startMonth, 1),
+        end: new Date(selectedYear, endMonth + 1, 0) // 该月最后一天
+      };
+    } else {
+      // 全年视图
+      return {
+        start: new Date(selectedYear, 0, 1),
+        end: new Date(selectedYear, 11, 31)
+      };
+    }
+  };
+  
+  const { start: startDate, end: endDate } = getDateRange();
+
   const allDates: { date: Date; xp: number; time?: number; dateStr: string }[] = [];
-  const current = new Date(startOfYear);
-  while (current <= endOfYear) {
+  const current = new Date(startDate);
+  while (current <= endDate) {
     const dateStr = toLocalDateStr(current);
     allDates.push({
       date: new Date(current),
@@ -135,11 +156,14 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data, totalXp: apiTo
     current.setDate(current.getDate() + 1);
   }
   
+  // 获取当前视图的最大 XP
+  const maxXp = Math.max(...allDates.map(d => d.xp), 50);
+  
   // 按周分组（从周日开始）
   const weeks: typeof allDates[] = [];
   let currentWeek: typeof allDates = [];
   
-  // 填充第一周的空白（1月1日之前的天数）
+  // 填充第一周的空白
   const firstDayOfWeek = allDates[0]?.date.getDay() || 0;
   for (let i = 0; i < firstDayOfWeek; i++) {
     currentWeek.push({ date: new Date(0), xp: -1, time: undefined, dateStr: '' });
@@ -153,14 +177,13 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data, totalXp: apiTo
     }
   });
   if (currentWeek.length > 0) {
-    // 填充最后一周的空白
     while (currentWeek.length < 7) {
       currentWeek.push({ date: new Date(0), xp: -1, time: undefined, dateStr: '' });
     }
     weeks.push(currentWeek);
   }
   
-  // 颜色函数 - Duolingo 绿色主题
+  // 颜色函数
   const getColor = (xp: number) => {
     if (xp < 0) return 'transparent';
     if (xp === 0) return '#ebedf0';
@@ -172,6 +195,12 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data, totalXp: apiTo
   };
   
   const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+  const quarterMonths = [
+    ['1月', '2月', '3月'],
+    ['4月', '5月', '6月'],
+    ['7月', '8月', '9月'],
+    ['10月', '11月', '12月']
+  ];
   
   // 计算月份标签位置
   const monthLabels: { month: string; weekIndex: number }[] = [];
@@ -181,39 +210,61 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data, totalXp: apiTo
     if (validDay && validDay.date.getTime() > 0) {
       const month = validDay.date.getMonth();
       if (month !== lastMonth) {
-        // 稍微调整位置以适应列宽
         monthLabels.push({ month: months[month], weekIndex });
         lastMonth = month;
       }
     }
   });
   
-  const yearXp = yearData.reduce((sum, d) => sum + d.xp, 0);
-  const activeDays = yearData.filter(d => d.xp > 0).length;
+  // 统计数据
+  const viewXp = allDates.reduce((sum, d) => sum + (d.xp > 0 ? d.xp : 0), 0);
+  const activeDays = allDates.filter(d => d.xp > 0).length;
 
   return (
     <div className="w-full">
-      {/* 年份选择器 */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        {sortedYears.map(year => (
-          <button
-            key={year}
-            onClick={() => setSelectedYear(year)}
-            className={`px-3 py-1 rounded-lg text-sm font-bold transition-all ${
-              year === selectedYear 
-                ? 'bg-[#58cc02] text-white' 
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {year}
-          </button>
-        ))}
+      {/* 年份和季度选择器 */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+        {/* 年份选择 */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {sortedYears.map(year => (
+            <button
+              key={year}
+              onClick={() => setSelectedYear(year)}
+              className={`px-3 py-1 rounded-lg text-sm font-bold transition-all ${
+                year === selectedYear 
+                  ? 'bg-[#58cc02] text-white' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {year}
+            </button>
+          ))}
+        </div>
+        
+        {/* 季度选择 - 仅在小屏幕显示 */}
+        {isMobile && (
+          <div className="flex items-center gap-1">
+            {[1, 2, 3, 4].map(q => (
+              <button
+                key={q}
+                onClick={() => setSelectedQuarter(q)}
+                className={`px-3 py-1 rounded-lg text-sm font-bold transition-all ${
+                  q === selectedQuarter 
+                    ? 'bg-[#1cb0f6] text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Q{q}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       
       <div className="w-full pb-2">
-        <div className="w-full relative">
+        <div className="relative w-full">
           {/* 月份标签 */}
-          <div className="flex ml-6 mb-1 text-xs text-gray-400 h-4 relative">
+          <div className="flex ml-4 mb-1 text-xs text-gray-400 h-4 relative w-full">
             {monthLabels.map((label, idx) => (
               <div 
                 key={idx} 
@@ -227,64 +278,72 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data, totalXp: apiTo
             ))}
           </div>
           
-          <div className="flex w-full items-start">
-            {/* 星期标签 - 与热力图格子同步 */}
-            <div className="flex flex-col gap-[2px] mr-1 text-[10px] text-gray-400 w-5 shrink-0">
-              {['', '一', '', '三', '', '五', ''].map((label, idx) => (
-                <div key={idx} className="aspect-square w-full flex items-center justify-center">
-                  {label}
-                </div>
-              ))}
-            </div>
+          {/* 使用 grid 统一布局，确保星期标签和格子对齐 */}
+          <div 
+            className="grid gap-[2px] relative w-full" 
+            style={{ 
+              gridTemplateColumns: `16px repeat(${weeks.length}, 1fr)`,
+            }}
+          >
+            {/* 星期标签列 */}
+            {['日', '一', '二', '三', '四', '五', '六'].map((label, idx) => (
+              <div 
+                key={`label-${idx}`} 
+                className="text-[10px] text-gray-400 flex items-center justify-center"
+                style={{ gridColumn: 1, gridRow: idx + 1 }}
+              >
+                {idx % 2 === 1 ? label : ''}
+              </div>
+            ))}
             
-            {/* 热力图格子 - 使用 grid 自动填满宽度 */}
-            <div className="flex-1 grid gap-[2px] relative" style={{ gridTemplateColumns: `repeat(${weeks.length}, 1fr)` }}>
-              {weeks.map((week, weekIdx) => (
-                <div key={weekIdx} className="flex flex-col gap-[2px]">
-                  {week.map((day, dayIdx) => (
-                    <div
-                      key={dayIdx}
-                      className="aspect-square w-full rounded-sm cursor-pointer hover:ring-2 hover:ring-[#58cc02] transition-all"
-                      style={{ backgroundColor: getColor(day.xp) }}
-                      onClick={(e) => {
-                        if (day.xp >= 0 && day.dateStr) {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          const parentRect = e.currentTarget.closest('.relative')?.getBoundingClientRect();
-                          if (parentRect) {
-                            setSelectedDay({
-                              date: day.dateStr,
-                              xp: day.xp,
-                              time: day.time,
-                              x: rect.left - parentRect.left + rect.width / 2,
-                              y: rect.top - parentRect.top
-                            });
-                          }
-                        }
-                      }}
-                    />
-                  ))}
-                </div>
-              ))}
-              
-              {/* 点击后显示的详情弹窗 */}
-              {selectedDay && (
-                <div 
-                  className="absolute z-50 bg-gray-800 text-white px-3 py-2 rounded-lg shadow-lg text-sm pointer-events-none"
+            {/* 热力图格子 */}
+            {weeks.map((week, weekIdx) => (
+              week.map((day, dayIdx) => (
+                <div
+                  key={`${weekIdx}-${dayIdx}`}
+                  className="aspect-square w-full rounded-sm cursor-pointer hover:ring-2 hover:ring-[#58cc02] transition-all"
                   style={{ 
-                    left: `${selectedDay.x}px`, 
-                    top: `${selectedDay.y - 60}px`,
-                    transform: 'translateX(-50%)'
+                    backgroundColor: getColor(day.xp),
+                    gridColumn: weekIdx + 2,
+                    gridRow: dayIdx + 1
                   }}
-                >
-                  <div className="font-bold">{selectedDay.date}</div>
-                  <div className="text-[#58cc02]">{selectedDay.xp} XP</div>
-                  {selectedDay.time !== undefined && selectedDay.time > 0 && (
-                    <div className="text-gray-400 text-xs">{selectedDay.time} 分钟</div>
-                  )}
-                  <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-gray-800"></div>
-                </div>
-              )}
-            </div>
+                  onClick={(e) => {
+                    if (day.xp >= 0 && day.dateStr) {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const parentRect = e.currentTarget.closest('.relative')?.getBoundingClientRect();
+                      if (parentRect) {
+                        setSelectedDay({
+                          date: day.dateStr,
+                          xp: day.xp,
+                          time: day.time,
+                          x: rect.left - parentRect.left + rect.width / 2,
+                          y: rect.top - parentRect.top
+                        });
+                      }
+                    }
+                  }}
+                />
+              ))
+            ))}
+            
+            {/* 点击后显示的详情弹窗 */}
+            {selectedDay && (
+              <div 
+                className="absolute z-50 bg-gray-800 text-white px-3 py-2 rounded-lg shadow-lg text-sm pointer-events-none"
+                style={{ 
+                  left: `${selectedDay.x}px`, 
+                  top: `${selectedDay.y - 60}px`,
+                  transform: 'translateX(-50%)'
+                }}
+              >
+                <div className="font-bold">{selectedDay.date}</div>
+                <div className="text-[#58cc02]">{selectedDay.xp} XP</div>
+                {selectedDay.time !== undefined && selectedDay.time > 0 && (
+                  <div className="text-gray-400 text-xs">{selectedDay.time} 分钟</div>
+                )}
+                <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-gray-800"></div>
+              </div>
+            )}
           </div>
           
           {/* 点击空白处关闭弹窗 */}
@@ -293,12 +352,21 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data, totalXp: apiTo
           )}
           
           {/* 图例 */}
-          <div className="flex items-center justify-between mt-3 pr-2">
-            <div className="text-xs text-gray-500 whitespace-nowrap">
-              {selectedYear} 年学习 <span className="text-[#58cc02] font-bold">{activeDays}</span> 天，
-              获得 <span className="text-[#ffc800] font-bold">{yearXp.toLocaleString()}</span> XP
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-3 gap-1 sm:gap-0">
+            <div className="text-xs text-gray-500">
+              {isMobile ? (
+                <>
+                  {selectedYear} Q{selectedQuarter} 学习 <span className="text-[#58cc02] font-bold">{activeDays}</span> 天，
+                  获得 <span className="text-[#ffc800] font-bold">{viewXp.toLocaleString()}</span> XP
+                </>
+              ) : (
+                <>
+                  {selectedYear} 年学习 <span className="text-[#58cc02] font-bold">{activeDays}</span> 天，
+                  获得 <span className="text-[#ffc800] font-bold">{viewXp.toLocaleString()}</span> XP
+                </>
+              )}
             </div>
-            <div className="flex items-center gap-1 text-xs text-gray-400 ml-4">
+            <div className="flex items-center gap-1 text-xs text-gray-400">
               <span>少</span>
               <div className="w-[10px] h-[10px] rounded-sm" style={{ backgroundColor: '#ebedf0' }} />
               <div className="w-[10px] h-[10px] rounded-sm" style={{ backgroundColor: '#c6efc6' }} />
