@@ -1,7 +1,7 @@
 import { defineConfig, envField } from 'astro/config';
 import react from '@astrojs/react';
 import tailwind from '@astrojs/tailwind';
-import node from '@astrojs/node';
+import vercel from '@astrojs/vercel';
 import { loadEnv } from 'vite';
 
 // 加载环境变量
@@ -9,9 +9,7 @@ const { DUOLINGO_USERNAME, DUOLINGO_JWT, AI_PROVIDER, GEMINI_API_KEY, OPENROUTER
 
 export default defineConfig({
   output: 'server',
-  adapter: node({
-    mode: 'standalone'
-  }),
+  adapter: vercel(),
   integrations: [
     react(),
     tailwind()
