@@ -12,30 +12,35 @@ interface AiConfig {
   baseUrl: string;
 }
 
+// 辅助函数：优先使用 process.env（Vercel 运行时），回退到 import.meta.env（本地开发）
+const getEnv = (key: string): string => {
+  return process.env[key] || (import.meta.env as any)[key] || '';
+};
+
 const getEnvConfig = (): AiConfig => {
-  const provider = (import.meta.env.AI_PROVIDER || 'gemini') as AiProvider;
-  const model = import.meta.env.AI_MODEL || 'gemini-2.5-flash';
-  const baseUrl = import.meta.env.AI_BASE_URL || '';
+  const provider = (getEnv('AI_PROVIDER') || 'gemini') as AiProvider;
+  const model = getEnv('AI_MODEL') || 'gemini-2.5-flash';
+  const baseUrl = getEnv('AI_BASE_URL') || '';
   
   let apiKey = '';
   switch (provider) {
     case 'gemini':
-      apiKey = import.meta.env.GEMINI_API_KEY || '';
+      apiKey = getEnv('GEMINI_API_KEY');
       break;
     case 'openrouter':
-      apiKey = import.meta.env.OPENROUTER_API_KEY || '';
+      apiKey = getEnv('OPENROUTER_API_KEY');
       break;
     case 'deepseek':
-      apiKey = import.meta.env.DEEPSEEK_API_KEY || '';
+      apiKey = getEnv('DEEPSEEK_API_KEY');
       break;
     case 'siliconflow':
-      apiKey = import.meta.env.SILICONFLOW_API_KEY || '';
+      apiKey = getEnv('SILICONFLOW_API_KEY');
       break;
     case 'moonshot':
-      apiKey = import.meta.env.MOONSHOT_API_KEY || '';
+      apiKey = getEnv('MOONSHOT_API_KEY');
       break;
     case 'custom':
-      apiKey = import.meta.env.CUSTOM_API_KEY || '';
+      apiKey = getEnv('CUSTOM_API_KEY');
       break;
   }
   

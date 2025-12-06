@@ -20,8 +20,9 @@ const fetchDuolingoApi = async (apiUrl: string, jwt: string): Promise<any> => {
 };
 
 export const GET: APIRoute = async () => {
-  const username = import.meta.env.DUOLINGO_USERNAME || '';
-  const jwt = import.meta.env.DUOLINGO_JWT || '';
+  // Vercel 运行时需要用 process.env
+  const username = process.env.DUOLINGO_USERNAME || import.meta.env.DUOLINGO_USERNAME || '';
+  const jwt = process.env.DUOLINGO_JWT || import.meta.env.DUOLINGO_JWT || '';
 
   if (!username || !jwt) {
     return new Response(JSON.stringify({ error: 'Not configured' }), { 
