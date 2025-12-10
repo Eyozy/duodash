@@ -68,30 +68,14 @@ export interface UserData {
   dailyGoal: number;
   achievements: Achievement[];
   estimatedLearningTime: string;
-  // 新增字段
-  fluencyScore?: number;
-  currentLevel?: number;
-  levelProgress?: number;
-  levelPercent?: number;
-  levelLeft?: number;
-  languageStrength?: number;
-  skills?: Skill[];
-  numSkillsLearned?: number;
-  knownWords?: number;
+  // 今日数据
   xpToday?: number;
   lessonsToday?: number;
-  sessionTime?: number;
-  friendsRanking?: FriendRanking[];
-  inventory?: InventoryItem[];
-  certificates?: Certificate[];
-  nextLesson?: NextLesson;
   streakExtendedToday?: boolean;
   streakExtendedTime?: string;
-  // 排行榜和成就
-  podiumFinishes?: number; // 前 3 名次数
-  monthlyXp?: number; // 本月 XP
-  weeklyXp?: number; // 本周 XP
-  lingots?: number; // 宝石（旧版）
+  // 统计数据
+  numSessionsCompleted?: number; // 完成课程数
+  streakFreezeCount?: number; // 连胜冻结卡数量
 }
 
 export enum LoadingState {

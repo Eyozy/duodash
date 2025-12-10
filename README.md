@@ -1,72 +1,100 @@
 # DuoDash - Duolingo 学习数据可视化面板
 
-一个美观的 Duolingo 学习数据可视化仪表板，展示你的学习进度、连胜记录、XP 历史等统计信息。
+一个美观的 Duolingo 学习数据可视化仪表板，帮助你更直观地了解学习进度、连胜记录、XP 历史等统计信息。
 
-## 功能特性
+## ✨ 功能特性
 
-- 📊 **数据可视化** - 7 天经验/学习时间趋势图、年度热力图
-- 🔥 **连胜追踪** - 显示连胜天数和今日学习状态
-- 🌍 **多语言支持** - 展示所有学习中的语言课程分布
-- 🤖 **AI 点评** - 基于学习数据生成个性化点评（支持多种 AI 服务）
-- 📱 **响应式设计** - 完美适配桌面和移动设备
-- 🎨 **Duolingo 风格** - 采用 Duolingo 官方配色和设计语言
+- 📊 **数据可视化** - 7 天经验/学习时间趋势图、年度学习热力图
+- 🔥 **连胜追踪** - 实时显示连胜天数和今日学习状态
+- 🌍 **多语言课程** - 展示所有学习中的语言课程及分布
+- 🤖 **AI 智能点评** - 基于学习数据生成个性化学习建议
+- 📱 **响应式设计** - 完美适配桌面、平板和移动设备
+- 🎨 **Duolingo 风格** - 采用官方配色和设计语言
 
-## 技术栈
+## 📁 项目结构
 
-- **框架**: [Astro](https://astro.build/) + React
-- **样式**: [Tailwind CSS](https://tailwindcss.com/)
-- **图表**: [Recharts](https://recharts.org/)
-- **类型**: TypeScript
-- **AI**: 支持 Gemini / OpenRouter / DeepSeek / 硅基流动 / Moonshot
+```
+duodash/
+├── public/                      # 静态资源
+├── src/
+│   ├── components/              # React 组件
+│   │   ├── AiCoach.tsx          # AI 点评组件
+│   │   ├── Charts.tsx           # 图表组件集合
+│   │   ├── DuoDashApp.tsx       # 主应用组件
+│   │   └── LoginScreen.tsx      # 登录界面
+│   ├── layouts/                 # 页面布局
+│   ├── pages/                   # 页面路由
+│   │   ├── index.astro          # 首页
+│   │   └── api/                 # API 路由
+│   │       ├── config.ts        # 配置检查接口
+│   │       ├── data.ts          # 数据聚合接口
+│   │       └── ai.ts            # AI 点评接口
+│   ├── services/                # 服务层
+│   │   ├── duolingoService.ts   # Duolingo 数据转换服务
+│   │   └── geminiService.ts     # AI 服务封装
+│   └── types.ts                 # TypeScript 类型定义
+├── .env.example                 # 环境变量示例
+├── astro.config.mjs             # Astro 配置
+├── tailwind.config.mjs          # Tailwind 配置
+└── tsconfig.json                # TypeScript 配置
+```
 
-## 快速开始
+## ⚙️ 环境变量
+
+| 变量名 | 必填 | 说明 |
+|--------|------|------|
+| `DUOLINGO_USERNAME` | 是 | Duolingo 用户名，用于自动加载数据 |
+| `DUOLINGO_JWT` | 是 | Duolingo JWT Token，用于 API 认证 |
+| `AI_PROVIDER` | 是 | AI 服务提供商：`gemini` / `openrouter` / `deepseek` / `siliconflow` / `moonshot` / `custom` |
+| `AI_API_KEY` | 是 | AI 服务的 API Key |
+| `AI_MODEL` | 是 | AI 模型名称，如 `gemini-pro` |
+| `AI_BASE_URL` | 否 | 自定义 AI 服务地址（provider 为 custom 时使用） |
+
+## 🚀 快速开始
 
 ### 环境要求
 
 - Node.js 18+
 - npm 或 pnpm
 
-### 安装
+### 安装步骤
 
 ```bash
-# 克隆项目
-git clone https://github.com/your-username/duodash.git
+# 1. 克隆项目
+git clone https://github.com/Eyozy/duodash.git
 cd duodash
 
-# 安装依赖
+# 2. 安装依赖
 npm install
-```
 
-### 配置
-
-1. 复制环境变量示例文件：
-
-```bash
+# 3. 配置环境变量
 cp .env.example .env.local
 ```
 
-2. 编辑 `.env.local` 文件：
+### 配置说明
+
+编辑 `.env.local` 文件，填入你的配置：
 
 ```env
-# Duolingo 凭据（可选，用于自动加载数据）
+# Duolingo 凭据
 DUOLINGO_USERNAME=your_duolingo_username
 DUOLINGO_JWT=your_jwt_token_here
 
-# AI 服务配置（可选，用于 AI 点评功能）
+# AI 服务配置（用于 AI 点评功能）
 AI_PROVIDER=gemini
 AI_API_KEY=your_api_key
 AI_MODEL=gemini-pro
 ```
 
-### 获取 Duolingo JWT Token
+### 获取 JWT Token
 
 1. 登录 [Duolingo 官网](https://www.duolingo.com/)
-2. 打开浏览器开发者工具（F12）
+2. 打开浏览器开发者工具（按 `F12`）
 3. 切换到「应用程序/Application」标签
-4. 在「Cookie」中找到 `jwt_token`
+4. 在左侧「Cookie」中找到 `jwt_token`
 5. 复制该值到 `.env.local` 文件
 
-### 运行
+### 运行项目
 
 ```bash
 # 开发模式
@@ -81,25 +109,25 @@ npm run preview
 
 访问 http://localhost:4321 查看应用。
 
-## 数据来源
+## 📦 数据加载方式
 
-DuoDash 支持三种数据加载方式：
+DuoDash 支持三种灵活的数据加载方式：
 
 ### 1. 自动加载（推荐）
 
 配置 `.env.local` 中的 `DUOLINGO_USERNAME` 和 `DUOLINGO_JWT`，应用启动时自动获取数据。
 
-### 2. 手动输入 JWT
+### 2. 手动输入
 
-在登录界面输入用户名和 JWT Token。
+在登录界面手动输入用户名和 JWT Token。
 
-### 3. 粘贴 JSON
+### 3. JSON 导入
 
 1. 访问 `https://www.duolingo.com/users/你的用户名`
-2. 复制页面全部 JSON 内容
-3. 在登录界面选择「粘贴 JSON」模式粘贴
+2. 复制页面显示的全部 JSON 内容
+3. 在登录界面选择「粘贴 JSON」模式并粘贴
 
-## 部署指南
+## 🌐 部署指南
 
 ### Vercel 部署（推荐）
 
@@ -109,11 +137,14 @@ DuoDash 支持三种数据加载方式：
 4. 配置环境变量：
    - `DUOLINGO_USERNAME`
    - `DUOLINGO_JWT`
-   - `AI_PROVIDER`（可选）
-   - `AI_API_KEY`（可选）
-5. 点击「Deploy」
+   - `AI_PROVIDER`
+   - `AI_API_KEY`
+   - `AI_MODEL`
+5. 点击「Deploy」完成部署
 
 ### Netlify 部署
+
+项目已配置自动适配器检测，可直接部署到 Netlify：
 
 1. 登录 [Netlify](https://netlify.com/)
 2. 点击「Add new site」→「Import an existing project」
@@ -121,130 +152,102 @@ DuoDash 支持三种数据加载方式：
 4. 构建设置：
    - Build command: `npm run build`
    - Publish directory: `dist`
-5. 在「Site settings」→「Environment variables」添加环境变量
-6. 触发重新部署
+5. 在「Site settings」→「Environment variables」添加环境变量：
+   - `DUOLINGO_USERNAME`
+   - `DUOLINGO_JWT`
+   - `AI_PROVIDER`
+   - `AI_API_KEY`
+   - `AI_MODEL`
+6. 触发部署
 
-### Docker 部署
+**说明**：项目会自动检测 Netlify 环境并使用 Node 适配器，无需手动配置。
 
-```dockerfile
-# Dockerfile
-FROM node:18-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
+## 📊 数据获取说明
 
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
+### 数据来源
 
-```bash
-# 构建镜像
-docker build -t duodash .
+DuoDash 通过 Duolingo 非官方 API 获取数据，主要使用以下接口：
 
-# 运行容器
-docker run -d -p 8080:80 duodash
-```
+1. **用户基础数据** - `https://www.duolingo.com/2017-06-30/users?username={username}`
+   - 用户信息、连胜天数、总 XP、宝石数量
+   - 课程列表、当前学习语言
+   - 会员状态、段位信息
 
-### 自托管（Node.js）
+2. **XP 历史数据** - `https://www.duolingo.com/2017-06-30/users/{userId}/xp_summaries`
+   - 每日获得的 XP 数量
+   - 每日学习时长（秒）
+   - 用于生成 7 天趋势图和年度热力图
 
-项目已配置 `@astrojs/node` 适配器，可直接构建和运行：
+3. **排行榜历史** - `https://www.duolingo.com/2017-06-30/users/{userId}/leaderboard_history`
+   - 段位赛历史记录
+   - 排名变化数据
 
-```bash
-# 构建
-npm run build
-
-# 运行服务器
-node dist/server/entry.mjs
-```
-
-服务器默认监听 `http://localhost:4321`。
-
-可通过环境变量自定义：
-
-```bash
-HOST=0.0.0.0 PORT=3000 node dist/server/entry.mjs
-```
-
-## 项目结构
+### 数据处理流程
 
 ```
-duodash/
-├── public/              # 静态资源
-├── src/
-│   ├── components/      # React 组件
-│   │   ├── AiCoach.tsx      # AI 点评组件
-│   │   ├── Charts.tsx       # 图表组件集合
-│   │   ├── DuoDashApp.tsx   # 主应用组件
-│   │   └── LoginScreen.tsx  # 登录界面
-│   ├── layouts/         # 页面布局
-│   ├── pages/           # 页面路由
-│   │   ├── index.astro      # 首页
-│   │   └── api/             # API 路由
-│   ├── services/        # 服务层
-│   │   ├── duolingoService.ts   # Duolingo 数据服务
-│   │   └── geminiService.ts     # AI 服务
-│   └── types.ts         # TypeScript 类型定义
-├── astro.config.mjs     # Astro 配置
-├── tailwind.config.mjs  # Tailwind 配置
-└── tsconfig.json        # TypeScript 配置
+用户登录 → 获取 JWT Token → 调用 /api/data 接口
+    ↓
+并行请求 Duolingo API (V1 + V2)
+    ↓
+数据合并与转换 (duolingoService.ts)
+    ↓
+前端展示 (DuoDashApp.tsx)
 ```
 
-## 环境变量说明
+### 关键数据字段
 
-| 变量名 | 必填 | 说明 |
-|--------|------|------|
-| `DUOLINGO_USERNAME` | 否 | Duolingo 用户名 |
-| `DUOLINGO_JWT` | 否 | Duolingo JWT Token |
-| `AI_PROVIDER` | 否 | AI 服务提供商：`gemini`/`openrouter`/`deepseek`/`siliconflow`/`moonshot`/`custom` |
-| `AI_API_KEY` | 否 | AI 服务 API Key |
-| `AI_MODEL` | 否 | AI 模型名称 |
-| `AI_BASE_URL` | 否 | 自定义 AI 服务地址（provider 为 custom 时使用） |
+| 展示项 | 数据来源 | 计算逻辑 |
+|--------|----------|----------|
+| 连胜天数 | `streak` | 直接从 API 获取 |
+| 总经验 | `courses[].xp` | 所有课程 XP 求和 |
+| 宝石数量 | `gems` 或 `trackingProperties.gems` | 优先使用 trackingProperties |
+| 当前段位 | `trackingProperties.leaderboard_league` | 映射到中文段位名称 |
+| 注册天数 | `creationDate` | 当前日期 - 注册日期 |
+| 学习课程数 | `courses.length` | 过滤 XP > 0 的课程 |
+| 预估投入时间 | `totalXp / 6` | 假设每分钟获得 6 XP |
+| 完成课程数 | `trackingProperties.num_sessions_completed` | 直接从 API 获取 |
+| 连胜冻结卡 | `trackingProperties.num_item_streak_freeze` | 直接从 API 获取 |
 
-## API 代理
+### 数据更新频率
 
-为解决 CORS 限制，项目内置 API 代理端点：
+- **实时数据**：连胜、XP、宝石等数据在每次刷新页面时更新
+- **手动刷新**：点击导航栏的"刷新"按钮可立即更新数据
+- **缓存策略**：服务端缓存 5 分钟，减少 API 请求频率
+- **API 限制**：建议不要频繁刷新，避免触发 Duolingo API 限流
 
-- `/api/duo?target=users&username=xxx` - 获取用户数据
-- `/api/duo?target=xp_summaries&userId=xxx` - 获取 XP 历史
-- `/api/duo?target=leaderboard_history&userId=xxx` - 获取排行榜历史
+### 数据准确性说明
 
-## 常见问题
+1. **总 XP 差异**：网站显示的是当前可见课程的 XP 总和，不包含已删除/重置课程的历史 XP
+2. **时间估算**：学习时长基于 XP 估算（每分钟 6 XP），实际时长可能有偏差
+3. **API 版本**：使用非官方 V1/V2 API，部分字段可能与 App 显示不一致
+
+## ❓ 常见问题
 
 ### Q: JWT Token 过期怎么办？
 
-JWT Token 有效期约 30 天，过期后需重新获取。建议定期更新 `.env.local` 或环境变量中的 Token。
-
-### Q: 热力图日期显示错误？
-
-已在 v1.1 修复时区问题，确保使用最新版本。
+如遇到数据加载失败或 "Invalid JWT" 错误，请重新从浏览器获取 Token。JWT Token 会定期过期，需要手动更新。
 
 ### Q: AI 点评不显示？
 
-检查 AI 相关环境变量是否正确配置，且 API Key 有效。
+请检查：
+- AI 相关环境变量是否正确配置
+- API Key 是否有效且有足够额度
+- 网络连接是否正常
 
-### Q: 数据不准确？
+### Q: 经验值与 App 显示不一致？
 
-数据来源于 Duolingo 非官方 API，部分字段可能不完整。建议使用「粘贴 JSON」模式获取最完整数据。
+这是正常现象，主要原因：
 
-## 更新日志
+1. **已删除/重置的课程**：App 保留历史经验值，但 API 不再返回已删除课程数据
+2. **API 版本差异**：本项目使用非官方 API，与 App 内部接口计算逻辑可能不同
 
-### v1.1.0
-- 修复热力图时区问题
-- 修复每日目标显示
-- 优化今日概览布局
-- 热力图显示真实学习时间（非估算）
-- 添加连胜保持时间显示
+**提示**：网站显示的「总经验」是当前可见课程的经验总和，不包含已删除课程的历史经验。
 
-### v1.0.0
-- 初始版本发布
-- 支持基本数据可视化
-- 支持 AI 点评功能
+### Q: 为什么加载速度较慢？
 
-## 贡献指南
+首次加载需要并行请求多个 Duolingo API 接口，可能需要 5-8 秒。后续访问会使用服务端缓存，速度会明显提升。
+
+## 🤝 贡献指南
 
 欢迎提交 Issue 和 Pull Request！
 
@@ -254,16 +257,17 @@ JWT Token 有效期约 30 天，过期后需重新获取。建议定期更新 `.
 4. 推送到分支 (`git push origin feature/amazing-feature`)
 5. 创建 Pull Request
 
-## 许可证
+## 📄 许可证
 
 MIT License - 详见 [LICENSE](LICENSE) 文件
 
-## 致谢
+## 🙏 致谢
 
 - [Duolingo](https://www.duolingo.com/) - 数据来源
-- [Astro](https://astro.build/) - 网站框架
-- [Recharts](https://recharts.org/) - 图表库
-- [Tailwind CSS](https://tailwindcss.com/) - CSS 框架
+- [Astro](https://astro.build/) - 现代化 Web 框架
+- [Recharts](https://recharts.org/) - React 图表库
+- [Tailwind CSS](https://tailwindcss.com/) - 实用优先的 CSS 框架
+- [GitHubPoster](https://github.com/yihong0618/GitHubPoster) - 年度学习热力图设计灵感
 
 ---
 
