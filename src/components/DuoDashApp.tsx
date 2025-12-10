@@ -342,14 +342,25 @@ export const DuoDashApp: React.FC = () => {
                     <div className="text-xs text-gray-500 font-bold mt-1">学习分钟</div>
                   </div>
                 </div>
-                {/* 连胜状态文字 */}
-                {userData.streakExtendedToday ? (
-                  <div className="text-sm text-center text-gray-500">
-                    🔥 {userData.streakExtendedTime ? `${userData.streakExtendedTime} 保住今日连胜` : '今日连胜已保住'}
+                {/* 学习状态显示 */}
+                {userData.xpToday && userData.xpToday > 0 ? (
+                  <div className="text-sm text-center">
+                    <div className="text-gray-700 font-semibold">
+                      🔥 今日已学习 {userData.xpToday} XP
+                    </div>
+                    {userData.streakExtendedTime && (
+                      <div className="text-xs text-gray-400 mt-1">
+                        {userData.streakExtendedTime} 保住连胜
+                      </div>
+                    )}
+                  </div>
+                ) : userData.streakExtendedToday ? (
+                  <div className="text-sm text-center text-blue-500">
+                    ❄️ 使用了连胜冻结卡
                   </div>
                 ) : (
                   <div className="text-sm text-center text-gray-400">
-                    ⏰ 今日还未学习，完成目标保住连胜
+                    ⏰ 今日还未学习
                   </div>
                 )}
               </div>
