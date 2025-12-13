@@ -9,21 +9,21 @@
   },
   "dependencies": {
     "@astrojs/netlify": "^6.6.3",
-    "@astrojs/node": "^9.0.0",
-    "@astrojs/react": "^4.2.0",
+    "@astrojs/node": "^9.5.1",
+    "@astrojs/react": "^4.4.2",
     "@astrojs/tailwind": "^6.0.2",
-    "@google/genai": "^1.30.0",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
-    "astro": "^5.9.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "@google/genai": "^1.33.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "astro": "^5.16.5",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
     "react-markdown": "^10.1.0",
-    "recharts": "^2.15.0",
-    "tailwindcss": "^3.4.17"
+    "recharts": "^3.5.1",
+    "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
-    "@astrojs/vercel": "^8.2.11",
-    "typescript": "~5.8.2"
+    "@astrojs/vercel": "^9.0.2",
+    "typescript": "~5.9.3"
   }
 }
