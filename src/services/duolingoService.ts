@@ -1,4 +1,4 @@
-import type { UserData, DuolingoRawUser, Course, Achievement, DuolingoLanguageDataDetail, Skill, Certificate, InventoryItem, FriendRanking, NextLesson } from "../types";
+import type { UserData, DuolingoRawUser, Course, DuolingoLanguageDataDetail } from "../types";
 
 const API_BASE_V1 = "https://www.duolingo.com/users";
 const API_BASE_V2 = "https://www.duolingo.com/2017-06-30/users";
@@ -18,32 +18,26 @@ const LEAGUE_TIERS = [
 ];
 
 export const transformDuolingoData = (rawData: DuolingoRawUser): UserData => {
-  const rawAny = rawData as any;
+  // rawData now has all extended fields typed in DuolingoRawUser interface
+  const rawAny = rawData;
 
   const streak = rawData.site_streak !== undefined ? rawData.site_streak : rawData.streak;
 
-  // 调试信息：检查后端 V1 API 请求状态
-  if (rawAny._debug_v1_status || rawAny._debug_v1_error) {
-    console.log('[DEBUG] Server-Side V1 Fetch Status:', rawAny._debug_v1_status);
-    if (rawAny._debug_v1_error) console.error('[DEBUG] Server-Side V1 Fetch Error:', rawAny._debug_v1_error);
-    if (rawAny._debug_v1_keys) console.log('[DEBUG] Server-Side V1 Data Keys:', rawAny._debug_v1_keys);
-  }
-
   // 宝石：优先检查 gems 相关字段 (App 数据)，最后才用 lingots (Web 数据)
-  const gems = rawAny.gemsTotalCount || rawAny.totalGems || rawAny.gems || rawAny.tracking_properties?.gems || rawAny.lingots || rawAny.rupees || 0;
+  const gems = rawData.gemsTotalCount || rawData.totalGems || rawData.gems || rawData.tracking_properties?.gems || rawData.lingots || rawData.rupees || 0;
 
   // 计算总 XP：优先使用 total_xp 字段
   let totalXp = rawData.total_xp !== undefined ? rawData.total_xp : (rawData.totalXp || 0);
   // 优先从 languages 数组累加（包含所有语言的经验）
-  if (totalXp === 0 && rawAny.languages && Array.isArray(rawAny.languages)) {
-    totalXp = rawAny.languages.reduce((sum: number, lang: any) => {
+  if (totalXp === 0 && rawData.languages && Array.isArray(rawData.languages)) {
+    totalXp = rawData.languages.reduce((sum, lang) => {
       return sum + (lang.points || 0);
     }, 0);
   }
   // 备用：从 language_data 累加
   if (totalXp === 0 && rawData.language_data) {
-    totalXp = Object.values(rawData.language_data).reduce((sum: number, lang: any) => {
-      return sum + (lang.points || lang.level_progress || 0);
+    totalXp = Object.values(rawData.language_data).reduce((sum, lang) => {
+      return sum + (lang.points || 0);
     }, 0);
   }
   // 最后备用：从 courses 数组累加
@@ -51,7 +45,7 @@ export const transformDuolingoData = (rawData: DuolingoRawUser): UserData => {
     totalXp = rawData.courses.reduce((acc, c) => acc + (c.xp || 0), 0);
   }
   // 每日目标
-  const dailyGoal = rawAny.dailyGoal ?? rawAny.daily_goal ?? rawAny.xpGoal ?? 0;
+  const dailyGoal = rawData.dailyGoal ?? rawData.daily_goal ?? rawData.xpGoal ?? 0;
   const creationTs = rawData.creation_date || rawData.creationDate;
 
   let courses: Course[] = [];
@@ -234,6 +228,12 @@ export const transformDuolingoData = (rawData: DuolingoRawUser): UserData => {
     tierIndex = rawAny.tier;
   } else if (rawAny.trackingProperties?.league_tier !== undefined) {
     tierIndex = rawAny.trackingProperties.league_tier;
+  } else if (rawAny.trackingProperties?.leaderboard_league !== undefined) {
+    tierIndex = rawAny.trackingProperties.leaderboard_league;
+  } else if (rawAny.tracking_properties?.league_tier !== undefined) {
+    tierIndex = rawAny.tracking_properties.league_tier;
+  } else if (rawAny.tracking_properties?.leaderboard_league !== undefined) {
+    tierIndex = rawAny.tracking_properties.leaderboard_league;
   } else if (rawData.language_data) {
     // 从 language_data 中获取
     const currentLang = Object.values(rawData.language_data).find((l: any) => l.current_learning) as any;
@@ -247,21 +247,30 @@ export const transformDuolingoData = (rawData: DuolingoRawUser): UserData => {
   let creationDateStr = "未知";
   let accountAgeDays = 0;
 
+  const calcDaysSince = (createdAt: Date) => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const startOfCreatedDay = new Date(createdAt);
+    startOfCreatedDay.setHours(0, 0, 0, 0);
+
+    const diffMs = startOfToday.getTime() - startOfCreatedDay.getTime();
+    return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+  };
+
   if (creationTs) {
     let ts = creationTs;
     if (ts < 10000000000) ts *= 1000;
     const cDate = new Date(ts);
     if (!isNaN(cDate.getTime())) {
       creationDateStr = cDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
-      const diffTime = Math.abs(new Date().getTime() - cDate.getTime());
-      accountAgeDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      accountAgeDays = calcDaysSince(cDate);
     }
   } else if (rawData.created) {
     const cDate = new Date(rawData.created);
     if (!isNaN(cDate.getTime())) {
       creationDateStr = cDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
-      const diffTime = Math.abs(new Date().getTime() - cDate.getTime());
-      accountAgeDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      accountAgeDays = calcDaysSince(cDate);
     }
   }
 
@@ -270,15 +279,6 @@ export const transformDuolingoData = (rawData: DuolingoRawUser): UserData => {
   const hasItemPremium = rawAny.has_item_premium_subscription || rawAny.has_item_immersive_subscription;
   const isPlus = rawData.hasPlus || rawData.hasSuper || rawData.plusStatus === 'active' || rawAny.has_plus || rawAny.is_plus || !!hasInventoryPremium || !!hasItemPremium || false;
 
-  const achievements: Achievement[] = (rawData.achievements || [])
-    .filter(a => a.stars > 0)
-    .map(a => ({
-      name: a.name,
-      stars: a.stars,
-      totalStars: a.totalStars,
-      description: a.description,
-      icon: a.imageUrl
-    }));
 
   // 基于显示的课程计算预估投入时间，确保数据和列表一致
   const visibleTotalXp = courses.reduce((acc, c) => acc + c.xp, 0);
@@ -286,103 +286,6 @@ export const transformDuolingoData = (rawData: DuolingoRawUser): UserData => {
   const estimatedHours = Math.floor(totalMinutes / 60);
   const remainingMinutes = totalMinutes % 60;
   const estimatedLearningTime = `${estimatedHours}小时 ${remainingMinutes}分钟`;
-
-  // 新增字段解析
-  // 流利度评分 (0-1) - 尝试多个可能的字段
-  let fluencyScore = rawAny.fluency_score ?? rawAny.fluencyScore;
-  if (fluencyScore === undefined && rawData.language_data) {
-    const currentLang = Object.values(rawData.language_data).find((l: any) => l.current_learning) as any;
-    if (currentLang) {
-      fluencyScore = currentLang.fluency_score ?? currentLang.fluency;
-    }
-  }
-
-  // 当前等级和进度 - 尝试多个来源
-  let currentLevel = 0;
-  let levelProgress = 0;
-  let levelPercent = 0;
-  let levelLeft = 0;
-  let numSkillsLearned = 0;
-  let nextLesson: NextLesson | undefined;
-
-  if (rawData.language_data) {
-    const currentLang = Object.values(rawData.language_data).find((l: any) => l.current_learning) as any;
-    if (currentLang) {
-      // 过滤无效等级值（如 9999）
-      const rawLevel = currentLang.level || 0;
-      currentLevel = (rawLevel > 0 && rawLevel < 100) ? rawLevel : 0;
-      levelProgress = currentLang.level_progress || 0;
-      levelPercent = currentLang.level_percent || 0;
-      levelLeft = currentLang.level_left || 0;
-      numSkillsLearned = currentLang.num_skills_learned || 0;
-
-      // 下一课程
-      if (currentLang.next_lesson) {
-        nextLesson = {
-          skillTitle: currentLang.next_lesson.skill_title || '',
-          skillUrl: currentLang.next_lesson.skill_url || '',
-          lessonNumber: currentLang.next_lesson.lesson_number || 1
-        };
-      }
-    }
-  }
-  // 从 courses 中获取（只使用有效的 level 值）
-  if (currentLevel === 0 && rawAny.courses && rawAny.courses.length > 0) {
-    const activeCourse = rawAny.courses.find((c: any) => c.learningLanguage === rawAny.learningLanguage) || rawAny.courses[0];
-    if (activeCourse && activeCourse.level > 0 && activeCourse.level < 100) {
-      currentLevel = activeCourse.level;
-    }
-  }
-  // 从 currentCourse 获取
-  if (currentLevel === 0 && rawAny.currentCourse && rawAny.currentCourse.level > 0 && rawAny.currentCourse.level < 100) {
-    currentLevel = rawAny.currentCourse.level;
-  }
-
-  // 语言强度 - 尝试多个字段
-  let languageStrength = rawAny.language_strength ?? rawAny.languageStrength;
-  if (languageStrength === undefined && rawData.language_data) {
-    const currentLang = Object.values(rawData.language_data).find((l: any) => l.current_learning) as any;
-    if (currentLang) {
-      languageStrength = currentLang.strength ?? currentLang.language_strength;
-    }
-  }
-
-  // 技能数据 - 尝试多个位置
-  const skills: Skill[] = [];
-  let skillsSource = rawAny.skills;
-
-  // 尝试从 language_data 中获取技能
-  if (!skillsSource && rawData.language_data) {
-    const currentLang = Object.values(rawData.language_data).find((l: any) => l.current_learning) as any;
-    if (currentLang && currentLang.skills) {
-      skillsSource = currentLang.skills;
-    }
-  }
-
-  if (skillsSource && Array.isArray(skillsSource)) {
-    skillsSource.forEach((s: any) => {
-      if (s.learned || s.accessible) {
-        skills.push({
-          name: s.title || s.name || s.shortName || 'Unknown',
-          strength: s.strength ?? (s.finishedLevels ? s.finishedLevels / (s.levels || 5) : 0),
-          learned: s.learned ?? s.accessible ?? false,
-          mastered: s.mastered ?? ((s.strength >= 1) || (s.finishedLevels >= (s.levels || 5)))
-        });
-      }
-    });
-  }
-
-  // 已学单词数 - 尝试多个来源
-  let knownWords = rawAny.num_words_learned ?? rawAny.known_words ?? rawAny.learned_words ?? 0;
-  if (!knownWords && rawData.language_data) {
-    knownWords = Object.values(rawData.language_data).reduce((acc: number, l: any) => {
-      return acc + (l.num_words || l.learned_words || l.known_words || 0);
-    }, 0);
-  }
-  // 从 vocabulary 获取
-  if (!knownWords && rawAny.vocabulary_overview) {
-    knownWords = rawAny.vocabulary_overview.length;
-  }
 
   // 今日 XP - 尝试多个来源
   let xpToday = 0;
@@ -446,92 +349,16 @@ export const transformDuolingoData = (rawData: DuolingoRawUser): UserData => {
     lessonsToday = todayGains.length;
   }
 
-  // 学习时间（秒）
-  if (rawAny.session_time !== undefined) {
-    sessionTime = rawAny.session_time;
-  } else if (rawAny.trackingProperties?.total_session_time) {
-    sessionTime = rawAny.trackingProperties.total_session_time;
-  }
-
-  // 好友排行 - 匿名化处理
-  const friendsRanking: FriendRanking[] = [];
-  const rankingSource = rawAny.points_ranking_data ?? rawAny.trackingProperties?.leaderboard_friends;
-  if (rankingSource && Array.isArray(rankingSource)) {
-    rankingSource.forEach((f: any, idx: number) => {
-      friendsRanking.push({
-        displayName: idx === 0 ? '你' : `用户 ${idx + 1}`,
-        xp: f.points_data?.total || f.total_xp || f.totalXp || f.xp || 0,
-        rank: idx + 1
-      });
-    });
-  }
-
-  // 商店物品/道具
-  const inventory: InventoryItem[] = [];
-  const invSource = rawAny.inventory ?? rawAny.shopItems;
-  if (invSource) {
-    if (typeof invSource === 'object' && !Array.isArray(invSource)) {
-      Object.entries(invSource).forEach(([name, qty]) => {
-        if (typeof qty === 'number' && qty > 0) {
-          inventory.push({ name, quantity: qty });
-        }
-      });
-    } else if (Array.isArray(invSource)) {
-      invSource.forEach((item: any) => {
-        if (item.quantity > 0) {
-          inventory.push({ name: item.name || item.id, quantity: item.quantity });
-        }
-      });
-    }
-  }
-
-  // 证书
-  const certificates: Certificate[] = [];
-  if (rawAny.certificates && Array.isArray(rawAny.certificates)) {
-    rawAny.certificates.forEach((c: any) => {
-      certificates.push({
-        language: c.language || c.language_string || 'Unknown',
-        score: c.score || 0,
-        date: c.datetime ? new Date(c.datetime).toLocaleDateString('zh-CN') : '未知'
-      });
-    });
-  }
-
-  // 前 3 名次数
-  let podiumFinishes = 0;
-  if (rawAny._leaderboardHistory?.leaderboard_history) {
-    const history = rawAny._leaderboardHistory.leaderboard_history;
-    if (Array.isArray(history)) {
-      podiumFinishes = history.filter((h: any) => h.rank && h.rank <= 3).length;
-    }
-  }
-
   return {
     streak, totalXp, gems,
     league: leagueName, leagueTier: tierIndex, courses, dailyXpHistory,
     dailyTimeHistory, yearlyXpHistory,
     learningLanguage, creationDate: creationDateStr, accountAgeDays,
-    isPlus, dailyGoal, achievements, estimatedLearningTime,
-    // 新增字段
-    fluencyScore,
-    currentLevel,
-    levelProgress,
-    levelPercent,
-    levelLeft,
-    languageStrength,
-    skills: skills.length > 0 ? skills : undefined,
-    numSkillsLearned: numSkillsLearned || (skills.length > 0 ? skills.filter(s => s.learned).length : undefined),
-    knownWords: knownWords || undefined,
+    isPlus, dailyGoal, estimatedLearningTime,
     xpToday,
     lessonsToday: lessonsToday || undefined,
-    sessionTime: sessionTime || undefined,
-    friendsRanking: friendsRanking.length > 0 ? friendsRanking : undefined,
-    inventory: inventory.length > 0 ? inventory : undefined,
-    certificates: certificates.length > 0 ? certificates : undefined,
-    nextLesson,
     streakExtendedToday,
     streakExtendedTime,
-    podiumFinishes,
     weeklyXp: rawAny.weeklyXp,
     numSessionsCompleted: rawAny.numSessionsCompleted,
     streakFreezeCount: rawAny.streakFreezeCount

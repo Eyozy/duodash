@@ -7,43 +7,6 @@ export interface Course {
   id: string;
 }
 
-export interface Skill {
-  name: string;
-  strength: number;
-  learned: boolean;
-  mastered: boolean;
-}
-
-export interface Certificate {
-  language: string;
-  score: number;
-  date: string;
-}
-
-export interface InventoryItem {
-  name: string;
-  quantity: number;
-}
-
-export interface FriendRanking {
-  displayName: string;
-  xp: number;
-  rank: number;
-}
-
-export interface Achievement {
-  name: string;
-  stars: number;
-  totalStars: number;
-  description: string;
-  icon?: string;
-}
-
-export interface NextLesson {
-  skillTitle: string;
-  skillUrl: string;
-  lessonNumber: number;
-}
 
 export interface DailyStats {
   date: string;
@@ -66,7 +29,7 @@ export interface UserData {
   accountAgeDays: number;
   isPlus: boolean;
   dailyGoal: number;
-  achievements: Achievement[];
+
   estimatedLearningTime: string;
   // 今日数据
   xpToday?: number;
@@ -74,8 +37,9 @@ export interface UserData {
   streakExtendedToday?: boolean;
   streakExtendedTime?: string;
   // 统计数据
-  numSessionsCompleted?: number; // 完成课程数
-  streakFreezeCount?: number; // 连胜冻结卡数量
+  numSessionsCompleted?: number;
+  streakFreezeCount?: number;
+  weeklyXp?: number;
 }
 
 export enum LoadingState {
@@ -120,12 +84,56 @@ export interface DuolingoLanguageDataDetail {
   current_learning?: boolean;
 }
 
-export interface DuolingoRawAchievement {
-  name: string;
-  stars: number;
-  totalStars: number;
-  description: string;
-  imageUrl?: string;
+// V1 API language entry
+export interface DuolingoLanguage {
+  language: string;
+  language_string: string;
+  points: number;
+  crowns?: number;
+  current_learning?: boolean;
+}
+
+// Tracking properties from API
+export interface DuolingoTrackingProperties {
+  gems?: number;
+  league_tier?: number;
+  leaderboard_league?: number;
+  user_id?: number;
+}
+
+// Inventory data
+export interface DuolingoInventory {
+  premium_subscription?: boolean;
+  super_subscription?: boolean;
+}
+
+// Streak data
+export interface DuolingoStreakData {
+  currentStreak?: {
+    startDate?: string;
+    endDate?: string;
+    lastExtendedDate?: string;
+  };
+}
+
+// XP gain event
+export interface DuolingoXpGain {
+  time: number;
+  xp: number;
+  skillId?: string;
+  eventType?: string;
+}
+
+// XP summary from xp_summaries API
+export interface DuolingoXpSummary {
+  date: number | string;
+  numSessions?: number;
+  gainedXp?: number;
+  gained_xp?: number;
+  frozen?: boolean;
+  streakExtended?: boolean;
+  totalSessionTime?: number;
+  total_session_time?: number;
 }
 
 export interface DuolingoRawUser {
@@ -154,5 +162,66 @@ export interface DuolingoRawUser {
   plusStatus?: string;
   dailyGoal?: number;
   daily_goal?: number;
-  achievements?: DuolingoRawAchievement[];
+  // Extended fields from various API versions
+  id?: number;
+  user_id?: number;
+  xpGoal?: number;
+  gemsTotalCount?: number;
+  totalGems?: number;
+  has_plus?: boolean;
+  is_plus?: boolean;
+  xp_today?: number;
+  streak_extended_today?: boolean;
+  streakExtendedToday?: boolean;
+  numSessionsCompleted?: number;
+  streakFreezeCount?: number;
+  weeklyXp?: number;
+  languages?: DuolingoLanguage[];
+  tracking_properties?: DuolingoTrackingProperties;
+  trackingProperties?: DuolingoTrackingProperties;
+  inventory?: DuolingoInventory;
+  has_item_premium_subscription?: boolean;
+  has_item_immersive_subscription?: boolean;
+  streakData?: DuolingoStreakData;
+  xpGains?: DuolingoXpGain[];
+  _xpSummaries?: DuolingoXpSummary[];
+  _leaderboardHistory?: unknown;
+}
+
+// XP Summary from API
+export interface XpSummary {
+  date: string;
+  numSessions: number;
+  gainedXp: number;
+  frozen: boolean;
+  streakExtended: boolean;
+  totalSessionTime: number;
+}
+
+// XP Gain event
+export interface XpGain {
+  time: number;
+  xp: number;
+  skillId?: string;
+  eventType?: string;
+}
+
+// Cache entry for API responses
+export interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+// Tooltip props for charts
+export interface TooltipPayload {
+  payload: {
+    title: string;
+    xp: number;
+    [key: string]: unknown;
+  };
+}
+
+export interface ChartTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayload[];
 }
