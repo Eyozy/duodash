@@ -1,12 +1,15 @@
 import type { APIRoute } from 'astro';
+import type { CacheEntry, UserData } from '../../types';
+import { transformDuolingoData } from '../../services/duolingoService';
 
 export const prerender = false;
 
 const DUOLINGO_BASE_URL = 'https://www.duolingo.com';
 
-// 服务端缓存：5 分钟 TTL
-const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 分钟
+// 服务端缓存：30 分钟 TTL，最大 100 条
+const cache = new Map<string, CacheEntry<UserData>>();
+const CACHE_TTL = 30 * 60 * 1000; // 30 分钟
+const MAX_CACHE_SIZE = 100;
 
 // Helper to fetch with timeout
 const fetchWithTimeout = async (url: string, headers: HeadersInit, timeoutMs: number = 3000): Promise<any> => {
@@ -31,7 +34,7 @@ export const GET: APIRoute = async () => {
   if (!username || !jwt) {
     return new Response(JSON.stringify({ error: 'Not configured' }), {
       status: 400,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json; charset=utf-8' }
     });
   }
 
@@ -41,7 +44,10 @@ export const GET: APIRoute = async () => {
   if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
     return new Response(JSON.stringify({ data: cached.data, cached: true }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'private, max-age=60',
+      }
     });
   }
 
@@ -52,127 +58,66 @@ export const GET: APIRoute = async () => {
       'Authorization': `Bearer ${jwt}`
     };
 
-    // 1. 并行获取 V1 和 V2 用户数据 (4秒超时，确保 5秒内响应)
-    const v1Url = `${DUOLINGO_BASE_URL}/users/${username}`;
+    // 1) 优先请求 V2（字段更全且稳定），失败再降级到 V1
     const v2Url = `${DUOLINGO_BASE_URL}/2017-06-30/users?username=${username}`;
+    const v2Raw = await fetchWithTimeout(v2Url, headers, 4500);
+    const v2Data = v2Raw?.users?.[0] || v2Raw; // V2 returns { users: [...] } usually
 
-
-    const [v1Data, v2Raw] = await Promise.all([
-      fetchWithTimeout(v1Url, headers, 4000).then(res => res),
-      fetchWithTimeout(v2Url, headers, 8000).then(res => res)
-    ]);
-
-    let v2Data = v2Raw?.users?.[0] || v2Raw; // V2 returns { users: [...] } usually
-
-    if (!v1Data && !v2Data) {
-      return new Response(JSON.stringify({ error: 'Failed to fetch user data' }), { status: 500 });
+    let userData = v2Data;
+    if (!userData) {
+      const v1Url = `${DUOLINGO_BASE_URL}/users/${username}`;
+      const v1Data = await fetchWithTimeout(v1Url, headers, 4500);
+      userData = v1Data;
     }
 
-    // Merge User Data (Prioritize V2, append V1 unique languages)
-    let userData = v2Data || v1Data;
-    if (v1Data && v1Data.languages) {
-      userData.languages = v1Data.languages;
-    }
-    if (v1Data && v1Data.language_data) {
-      userData.language_data = v1Data.language_data;
-    }
-    if (v2Data && v2Data.courses) {
-      userData.courses = v2Data.courses;
+    if (!userData) {
+      return new Response(JSON.stringify({ error: 'Failed to fetch user data' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json; charset=utf-8' }
+      });
     }
 
-    // 获取用户 ID
+    // 2. 获取用户 ID 并并行请求 XP Summaries (核心数据，必须有)
     const userId = userData.id || userData.user_id || userData.tracking_properties?.user_id;
 
-    // 2. 并行获取 XP Summaries 和 Leaderboard History (8秒超时)
     if (userId) {
-      const [xpData, leaderboardHistory] = await Promise.all([
-        fetchWithTimeout(`${DUOLINGO_BASE_URL}/2017-06-30/users/${userId}/xp_summaries?startDate=1970-01-01`, headers, 8000),
-        fetchWithTimeout(`${DUOLINGO_BASE_URL}/2017-06-30/users/${userId}/leaderboard_history`, headers, 8000)
+      // 这里的 3000ms 超时是为了保证尽量不拖慢主请求，如果超时了，前端会显示空白图表但主数据还在
+      // 实际上 xp_summaries 通常很快
+      const [xpData] = await Promise.all([
+        fetchWithTimeout(`${DUOLINGO_BASE_URL}/2017-06-30/users/${userId}/xp_summaries?startDate=1970-01-01`, headers, 5000)
       ]);
 
       if (xpData?.summaries) {
         userData._xpSummaries = xpData.summaries;
       }
-      if (leaderboardHistory) {
-        userData._leaderboardHistory = leaderboardHistory;
-      }
     }
 
-    // 清理敏感信息
-    const sanitizedData = sanitizeUserData(userData);
+    // 3. 为了响应速度，这里只请求 xpSummaries
 
-    // 写入缓存
-    cache.set(cacheKey, { data: sanitizedData, timestamp: Date.now() });
+    // 直接在服务端完成 transform，避免把巨大的原始 JSON 传到前端
+    const transformed = transformDuolingoData(userData);
 
-    return new Response(JSON.stringify({ data: sanitizedData }), {
+    // 写入缓存（限制大小）
+    if (cache.size >= MAX_CACHE_SIZE) {
+      // 删除最旧的条目
+      const oldestKey = cache.keys().next().value;
+      if (oldestKey) cache.delete(oldestKey);
+    }
+    cache.set(cacheKey, { data: transformed, timestamp: Date.now() });
+
+    return new Response(JSON.stringify({ data: transformed }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'private, max-age=60',
+      }
     });
 
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json; charset=utf-8' }
     });
   }
 };
-
-// 清理敏感信息，只保留需要展示的数据
-function sanitizeUserData(raw: any): any {
-  const sanitized = { ...raw };
-
-  // 保留关键的 trackingProperties 数据到顶层（注意是驼峰命名）
-  if (raw.trackingProperties) {
-    // 段位数据在 leaderboard_league 字段中
-    if (raw.trackingProperties.leaderboard_league !== undefined) {
-      sanitized.tier = raw.trackingProperties.leaderboard_league;
-    }
-    if (raw.trackingProperties.total_session_time !== undefined) {
-      sanitized.total_session_time = raw.trackingProperties.total_session_time;
-    }
-    if (raw.trackingProperties.gems !== undefined && !sanitized.gems) {
-      sanitized.gems = raw.trackingProperties.gems;
-    }
-    // 新增字段提取
-    if (raw.trackingProperties.num_sessions_completed !== undefined) {
-      sanitized.numSessionsCompleted = raw.trackingProperties.num_sessions_completed;
-    }
-    if (raw.trackingProperties.num_item_streak_freeze !== undefined) {
-      sanitized.streakFreezeCount = raw.trackingProperties.num_item_streak_freeze;
-    }
-  }
-
-  // 提取 weeklyXp 和 monthlyXp（这些在顶层）
-  if (raw.weeklyXp !== undefined) {
-    sanitized.weeklyXp = raw.weeklyXp;
-  }
-  if (raw.monthlyXp !== undefined) {
-    sanitized.monthlyXp = raw.monthlyXp;
-  }
-
-  // 删除敏感字段
-  const sensitiveFields = [
-    'email', 'phone', 'googleId', 'facebookId', 'appleId', 'twitterId',
-    'username', 'name', 'fullname', 'bio', 'location', 'profileCountry',
-    'timezone', 'betaStatus', 'inviteURL', 'privacySettings',
-    'notificationSettings', 'emailVerified', 'hasPhoneNumber',
-    'trackingProperties', 'acquisitionSurveyReason', 'canUseModerationTools',
-    'hasObserver', 'observedBy', 'blockerUserIds', 'blockedUserIds',
-    'id', 'user_id', 'learnerContext', 'picture', 'avatar',
-  ];
-
-  sensitiveFields.forEach(field => {
-    delete sanitized[field];
-  });
-
-  // 清理好友排行数据
-  if (sanitized.points_ranking_data) {
-    sanitized.points_ranking_data = sanitized.points_ranking_data.map((friend: any, idx: number) => ({
-      display_name: idx === 0 ? '你' : `用户 ${idx + 1}`,
-      points_data: friend.points_data,
-      rank: idx + 1
-    }));
-  }
-
-  return sanitized;
-}
