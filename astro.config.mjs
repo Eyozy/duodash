@@ -25,5 +25,30 @@ export default defineConfig({
   integrations: [
     react(),
     tailwind()
-  ]
+  ],
+  vite: {
+    build: {
+      cssCodeSplit: true,
+      minify: 'esbuild',
+      cssMinify: 'esbuild',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'recharts': ['recharts'],
+            'react-vendor': ['react', 'react-dom']
+          }
+        }
+      }
+    },
+    ssr: {
+      noExternal: ['recharts']
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'recharts']
+    }
+  },
+  compressHTML: true,
+  build: {
+    inlineStylesheets: 'auto'
+  }
 });

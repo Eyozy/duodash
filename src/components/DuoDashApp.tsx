@@ -9,19 +9,19 @@ const LazyTimeHistoryChart = lazy(() => import('./charts/TimeHistoryChart'));
 const LazyHeatmapChart = lazy(() => import('./Charts').then(m => ({ default: m.HeatmapChart })));
 const LazyAiCoach = lazy(() => import('./AiCoach').then(m => ({ default: m.AiCoach })));
 
-// Chart loading fallback
+// Chart loading fallback with fixed height to prevent CLS
 const ChartSkeleton = () => (
-  <div className="h-48 w-full bg-gray-100 rounded-xl animate-pulse flex items-center justify-center">
+  <div className="h-40 w-full bg-gray-100 rounded-xl animate-pulse flex items-center justify-center" style={{ minHeight: '160px' }}>
     <span className="text-gray-600 text-sm">加载中...</span>
   </div>
 );
 
-// 入场动画样式 - 使用纯 CSS 实现顺序显示
+// 入场动画样式 - 优化为更快的动画，减少延迟
 const animationStyles = `
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -30,23 +30,23 @@ const animationStyles = `
 }
 
 .animate-seq {
-  animation: fadeInUp 0.35s ease-out forwards;
+  animation: fadeInUp 0.2s ease-out forwards;
   opacity: 0;
 }
 
-/* 顺序动画延迟 - 每个间隔 400ms 确保完全串行 */
+/* 缩短动画延迟 - 每个间隔 100ms */
 .seq-1 { animation-delay: 0s; }
-.seq-2 { animation-delay: 0.4s; }
-.seq-3 { animation-delay: 0.8s; }
-.seq-4 { animation-delay: 1.2s; }
-.seq-5 { animation-delay: 1.6s; }
-.seq-6 { animation-delay: 2.0s; }
-.seq-7 { animation-delay: 2.4s; }
-.seq-8 { animation-delay: 2.8s; }
-.seq-9 { animation-delay: 3.2s; }
-.seq-10 { animation-delay: 3.6s; }
-.seq-11 { animation-delay: 4.0s; }
-.seq-12 { animation-delay: 4.4s; }
+.seq-2 { animation-delay: 0.1s; }
+.seq-3 { animation-delay: 0.15s; }
+.seq-4 { animation-delay: 0.2s; }
+.seq-5 { animation-delay: 0.25s; }
+.seq-6 { animation-delay: 0.3s; }
+.seq-7 { animation-delay: 0.35s; }
+.seq-8 { animation-delay: 0.4s; }
+.seq-9 { animation-delay: 0.45s; }
+.seq-10 { animation-delay: 0.5s; }
+.seq-11 { animation-delay: 0.55s; }
+.seq-12 { animation-delay: 0.6s; }
 `;
 
 const DEMO_DATA: UserData = {
@@ -195,36 +195,15 @@ export const DuoDashApp: React.FC = () => {
     return () => observer.disconnect();
   }, [userData?.yearlyXpHistory?.length, shouldRenderHeatmap]);
 
-  // 图表延迟渲染
+  // 图表立即渲染优化
   useEffect(() => {
     if (!userData) {
       setShouldRenderAboveFoldCharts(false);
       return;
     }
 
-    let cancelled = false;
-    const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: { timeout: number }) => number);
-    const cic = (window as any).cancelIdleCallback as undefined | ((id: number) => void);
-    let idleId: number | null = null;
-
-    if (ric) {
-      idleId = ric(() => {
-        if (!cancelled) setShouldRenderAboveFoldCharts(true);
-      }, { timeout: 1500 });
-    } else {
-      const t = window.setTimeout(() => {
-        if (!cancelled) setShouldRenderAboveFoldCharts(true);
-      }, 300);
-      return () => {
-        cancelled = true;
-        window.clearTimeout(t);
-      };
-    }
-
-    return () => {
-      cancelled = true;
-      if (idleId !== null && cic) cic(idleId);
-    };
+    // 立即渲染图表以加快LCP
+    setShouldRenderAboveFoldCharts(true);
   }, [userData]);
 
   const handleConnect = async (username: string, jwt: string) => {
@@ -316,7 +295,7 @@ export const DuoDashApp: React.FC = () => {
   const viewData = userData ?? PLACEHOLDER_DATA;
 
   return (
-    <div className="min-h-screen pb-12 bg-[#f7f7f7]">
+    <div className="min-h-screen bg-[#f7f7f7]">
       <style>{animationStyles}</style>
 
       <Navbar loading={loading} lastUpdated={lastUpdated} onRefresh={handleRefresh} />
@@ -325,7 +304,7 @@ export const DuoDashApp: React.FC = () => {
         <PageHeader userData={userData} viewData={viewData} />
 
         <div className="space-y-6">
-          {/* 统计卡片 */}
+          {/* 统计卡片 - 优化为自适应高度 */}
           <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
             <StatCard icon="⚡" value={userData ? viewData.totalXp.toLocaleString() : '—'} label="总经验" colorClass="text-yellow-500" seq={1} />
             <StatCard icon="📅" value={userData ? viewData.accountAgeDays : '—'} label="注册天数" colorClass="text-blue-500" seq={2} />
