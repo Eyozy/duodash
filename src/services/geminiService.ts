@@ -20,8 +20,9 @@ export const analyzeUserStats = async (userData: UserData): Promise<string> => {
 
     const data: AiResponse = await response.json();
     return data.analysis;
-  } catch (error: any) {
-    return `咕咕！连接出错：${error.message}`;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return `咕咕！连接出错：${message}`;
   }
 };
 

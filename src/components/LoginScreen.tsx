@@ -20,7 +20,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onConnect, onJsonInput
     <div className="min-h-screen bg-[#235390] flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden border-2 border-b-4 border-gray-200">
         <div className="p-8 text-center bg-white">
-          <img src="https://design.duolingo.com/28e4b3aebfae83e5ff2f.svg" alt="Duo" className="w-24 h-24 mx-auto mb-6 animate-bounce" />
+          <img src="/duo-owl.svg" alt="Duo" width="96" height="96" className="w-24 h-24 mx-auto mb-6 animate-bounce" />
           <h1 className="text-3xl font-extrabold text-gray-700 mb-2">DuoDash 仪表盘</h1>
           <p className="text-gray-500 mb-8 font-medium">输入你的信息以可视化学习数据</p>
 
@@ -42,13 +42,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onConnect, onJsonInput
                 <strong>技术说明：</strong> 此功能尝试直接连接多邻国 API，可能因 CORS 限制失败。
               </div>
               <div className="text-left">
-                <label className="block text-gray-700 font-bold mb-2 ml-1 text-sm uppercase">用户名</label>
-                <input type="text" value={username} onChange={(e) => setUsername(e.target.value)}
+                <label htmlFor="username-input" className="block text-gray-700 font-bold mb-2 ml-1 text-sm uppercase">用户名</label>
+                <input id="username-input" type="text" value={username} onChange={(e) => setUsername(e.target.value)}
                   className="w-full bg-gray-100 border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#58cc02] font-bold text-gray-700" placeholder="例如：SteveThePolyglot" />
               </div>
               <div className="text-left">
-                <label className="block text-gray-700 font-bold mb-2 ml-1 text-sm uppercase">JWT Token (可选)</label>
-                <input type="password" value={jwt} onChange={(e) => setJwt(e.target.value)}
+                <label htmlFor="jwt-input" className="block text-gray-700 font-bold mb-2 ml-1 text-sm uppercase">JWT Token (可选)</label>
+                <input id="jwt-input" type="password" value={jwt} onChange={(e) => setJwt(e.target.value)}
                   className="w-full bg-gray-100 border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#58cc02] font-bold text-gray-700" placeholder="如果为空，将尝试获取公开数据" />
               </div>
               <button onClick={() => onConnect(username, jwt)} disabled={loading || !username}
@@ -61,7 +61,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onConnect, onJsonInput
               <div className="bg-gray-50 p-4 rounded-xl border-2 border-dashed border-gray-300 text-left space-y-3">
                 <p className="text-sm text-gray-600 font-bold">稳定获取数据步骤：</p>
                 <div className="bg-yellow-50 border border-yellow-200 p-2 rounded text-xs text-yellow-800 font-bold">
-                  ⚠️ 必须先在当前浏览器登录 <a href="https://www.duolingo.com" target="_blank" className="underline">duolingo.com</a>
+                  ⚠️ 必须先在当前浏览器登录 <a href="https://www.duolingo.com" target="_blank" rel="noopener noreferrer" className="underline">duolingo.com</a>
                 </div>
                 <ol className="list-decimal list-inside text-xs text-gray-500 space-y-1">
                   <li>在下方输入用户名，点击"打开数据页"</li>
@@ -70,14 +70,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onConnect, onJsonInput
                 </ol>
                 <div className="flex gap-2">
                   <input type="text" placeholder="你的用户名" value={username} onChange={(e) => setUsername(e.target.value)}
-                    className="flex-1 bg-white border border-gray-300 rounded-lg px-2 py-1 text-sm font-bold text-gray-700" />
+                    className="flex-1 bg-white border border-gray-300 rounded-lg px-2 py-1 text-sm font-bold text-gray-700" aria-label="用户名" />
                   <a href={getJsonUrl()} target="_blank" rel="noopener noreferrer"
                     className="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold py-2 px-3 rounded-lg flex items-center">打开数据页 ↗</a>
                 </div>
               </div>
               <div className="text-left">
-                <label className="block text-gray-700 font-bold mb-2 ml-1 text-sm uppercase">粘贴 JSON 数据</label>
-                <textarea value={jsonInput} onChange={(e) => setJsonInput(e.target.value)}
+                <label htmlFor="json-input" className="block text-gray-700 font-bold mb-2 ml-1 text-sm uppercase">粘贴 JSON 数据</label>
+                <textarea id="json-input" value={jsonInput} onChange={(e) => setJsonInput(e.target.value)}
                   className="w-full h-32 bg-gray-100 border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-[#58cc02] font-mono text-xs text-gray-700"
                   placeholder='{"language_data": {...}}' />
               </div>

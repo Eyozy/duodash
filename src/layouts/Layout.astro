@@ -11,7 +11,12 @@ const { title } = Astro.props;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="DuoDash - 多邻国学习数据可视化仪表盘" />
+    <meta name="description" content="DuoDash - 多邻国学习数据可视化仪表盘，展示你的学习进度、连胜记录和 XP 历史" />
+    <meta name="theme-color" content="#58cc02" />
+    
+    <!-- Preconnect to external origins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     
     <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website" />
@@ -28,7 +33,11 @@ const { title } = Astro.props;
     <meta name="twitter:image" content="/og.jpg" />
     
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    
+    <!-- Non-blocking font loading -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" /></noscript>
+    
     <title>{title}</title>
   </head>
   <body class="font-nunito bg-[#f7f7f7]">
