@@ -8,15 +8,26 @@ interface HeatmapChartProps {
 export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
   const [selectedYear, setSelectedYear] = React.useState<number>(new Date().getFullYear());
   const [selectedQuarter, setSelectedQuarter] = React.useState<number>(Math.ceil((new Date().getMonth() + 1) / 3));
+  const [selectedHalf, setSelectedHalf] = React.useState<number>(new Date().getMonth() < 6 ? 1 : 2);
   const [selectedDay, setSelectedDay] = React.useState<{ date: string; xp: number; time?: number; x: number; y: number } | null>(null);
-  const [isMobile, setIsMobile] = React.useState<boolean>(false);
+  // 视图模式：'quarter' | 'half' | 'year'
+  const [viewMode, setViewMode] = React.useState<'quarter' | 'half' | 'year'>('year');
 
-  // 检测屏幕宽度
+  // 检测屏幕宽度，三档断点
   React.useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    const checkScreenSize = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        setViewMode('quarter');
+      } else if (width < 1024) {
+        setViewMode('half');
+      } else {
+        setViewMode('year');
+      }
+    };
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
   // 创建日期到 XP 和时间的映射
@@ -42,15 +53,23 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
   const toLocalDateStr = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-  // 根据是否移动端决定日期范围
+  // 根据视图模式决定日期范围
   const getDateRange = () => {
-    if (isMobile) {
+    if (viewMode === 'quarter') {
       // 季度视图：Q1=1-3 月，Q2=4-6 月，Q3=7-9 月，Q4=10-12 月
       const startMonth = (selectedQuarter - 1) * 3;
       const endMonth = startMonth + 2;
       return {
         start: new Date(selectedYear, startMonth, 1),
         end: new Date(selectedYear, endMonth + 1, 0) // 该月最后一天
+      };
+    } else if (viewMode === 'half') {
+      // 半年视图：H1=1-6 月，H2=7-12 月
+      const startMonth = (selectedHalf - 1) * 6;
+      const endMonth = startMonth + 5;
+      return {
+        start: new Date(selectedYear, startMonth, 1),
+        end: new Date(selectedYear, endMonth + 1, 0)
       };
     } else {
       // 全年视图
@@ -115,12 +134,6 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
   };
 
   const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-  const quarterMonths = [
-    ['1月', '2月', '3月'],
-    ['4月', '5月', '6月'],
-    ['7月', '8月', '9月'],
-    ['10月', '11月', '12月']
-  ];
 
   // 计算月份标签位置
   const monthLabels: { month: string; weekIndex: number }[] = [];
@@ -160,8 +173,8 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
           ))}
         </div>
 
-        {/* 季度选择 - 仅在小屏幕显示 */}
-        {isMobile && (
+        {/* 季度选择 - 仅在小屏幕 (< 640px)显示 */}
+        {viewMode === 'quarter' && (
           <div className="flex items-center gap-1">
             {[1, 2, 3, 4].map(q => (
               <button
@@ -173,6 +186,24 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
                   }`}
               >
                 Q{q}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 半年选择 - 仅在中等屏幕 (640px-1024px) 显示 */}
+        {viewMode === 'half' && (
+          <div className="flex items-center gap-1">
+            {[1, 2].map(h => (
+              <button
+                key={h}
+                onClick={() => setSelectedHalf(h)}
+                className={`px-3 py-1 rounded-lg text-sm font-bold transition-all ${h === selectedHalf
+                  ? 'bg-[#1cb0f6] text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                {h === 1 ? '上半年' : '下半年'}
               </button>
             ))}
           </div>
@@ -198,7 +229,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
 
           {/* 使用 grid 统一布局，确保星期标签和格子对齐 */}
           <div
-            className="grid gap-[2px] relative w-full"
+            className="grid gap-[1px] lg:gap-[2px] relative w-full"
             style={{
               gridTemplateColumns: `16px repeat(${weeks.length}, 1fr)`,
             }}
@@ -272,9 +303,14 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
           {/* 图例 */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-3 gap-1 sm:gap-0">
             <div className="text-xs text-gray-500">
-              {isMobile ? (
+              {viewMode === 'quarter' ? (
                 <>
                   {selectedYear} Q{selectedQuarter} 学习 <span className="text-[#58cc02] font-bold">{activeDays}</span> 天，
+                  获得 <span className="text-[#ffc800] font-bold">{viewXp.toLocaleString()}</span> XP
+                </>
+              ) : viewMode === 'half' ? (
+                <>
+                  {selectedYear} {selectedHalf === 1 ? '上半年' : '下半年'}学习 <span className="text-[#58cc02] font-bold">{activeDays}</span> 天，
                   获得 <span className="text-[#ffc800] font-bold">{viewXp.toLocaleString()}</span> XP
                 </>
               ) : (
