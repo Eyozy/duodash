@@ -7,6 +7,7 @@ import { Navbar, PageHeader, StatCard, CourseList, TodayOverview } from './dashb
 const LazyXpHistoryChart = lazy(() => import('./charts/XpHistoryChart'));
 const LazyTimeHistoryChart = lazy(() => import('./charts/TimeHistoryChart'));
 const LazyHeatmapChart = lazy(() => import('./Charts').then(m => ({ default: m.HeatmapChart })));
+const LazyAchievementsSection = lazy(() => import('./AchievementsSection'));
 const LazyAiCoach = lazy(() => import('./AiCoach').then(m => ({ default: m.AiCoach })));
 
 // Chart loading fallback with fixed height to prevent CLS
@@ -269,6 +270,29 @@ export const DuoDashApp: React.FC = () => {
     }
   };
 
+  // 全屏加载页面 - 首次加载时显示
+  if (loading && !userData) {
+    return (
+      <div className="min-h-screen bg-[#235390] flex flex-col items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-6">
+          {/* Duolingo 风格的加载动画 */}
+          <div className="relative">
+            <div className="w-20 h-20 rounded-full bg-[#58cc02] flex items-center justify-center shadow-lg animate-pulse">
+              <svg className="w-12 h-12 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+            <div className="absolute inset-0 w-20 h-20 rounded-full border-4 border-white/30 border-t-white animate-spin" />
+          </div>
+          <div className="text-center">
+            <h2 className="text-white text-xl font-bold mb-2">正在加载数据</h2>
+            <p className="text-white/70 text-sm">请稍候...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // 错误页面
   if (!userData && isConfigured && error) {
     return (
@@ -371,7 +395,7 @@ export const DuoDashApp: React.FC = () => {
           {userData && userData.yearlyXpHistory && userData.yearlyXpHistory.length > 0 && (
             <div
               ref={heatmapSentinelRef}
-              className="bg-white rounded-2xl p-6 shadow-sm border-2 border-b-4 border-gray-200 animate-seq seq-11"
+              className="bg-white rounded-2xl p-6 shadow-sm border-2 border-b-4 border-gray-200 animate-seq seq-10"
             >
               <h2 className="text-gray-700 font-bold text-xl mb-4">📅 年度学习热力图</h2>
               {shouldRenderHeatmap ? (
@@ -383,6 +407,15 @@ export const DuoDashApp: React.FC = () => {
                   向下滚动时加载热力图…
                 </div>
               )}
+            </div>
+          )}
+
+          {/* 成就殿堂 - 独立区域 */}
+          {userData && userData.yearlyXpHistory && userData.yearlyXpHistory.length > 0 && (
+            <div className="animate-seq seq-11">
+              <Suspense fallback={<div className="h-64 w-full bg-gray-100 rounded-2xl animate-pulse" />}>
+                <LazyAchievementsSection data={userData.yearlyXpHistory} />
+              </Suspense>
             </div>
           )}
         </div>
