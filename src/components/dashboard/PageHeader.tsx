@@ -6,9 +6,6 @@ interface PageHeaderProps {
     viewData: UserData;
 }
 
-/**
- * 页面标题和统计徽章组件
- */
 export const PageHeader: React.FC<PageHeaderProps> = ({ userData, viewData }) => {
     return (
         <div className="mb-10 animate-fade-in-up delay-1">
@@ -24,7 +21,6 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ userData, viewData }) =>
                 )}
             </p>
 
-            {/* 统计徽章 */}
             <div className="flex flex-wrap items-center gap-3">
                 {viewData.isPlus && (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-sm">

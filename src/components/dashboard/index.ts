@@ -1,4 +1,3 @@
-// Dashboard components barrel export
 export { StatCard } from './StatCard';
 export { CourseList } from './CourseList';
 export { TodayOverview } from './TodayOverview';

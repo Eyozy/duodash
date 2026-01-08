@@ -7,7 +7,7 @@ import { Navbar, PageHeader, StatCard, CourseList, TodayOverview } from './dashb
 const LazyXpHistoryChart = lazy(() => import('./charts/XpHistoryChart'));
 const LazyTimeHistoryChart = lazy(() => import('./charts/TimeHistoryChart'));
 const LazyHeatmapChart = lazy(() => import('./Charts').then(m => ({ default: m.HeatmapChart })));
-const LazyAchievementsSection = lazy(() => import('./AchievementsSection'));
+const LazyAchievementsSection = lazy(() => import('./achievements/AchievementsSection'));
 const LazyAiCoach = lazy(() => import('./AiCoach').then(m => ({ default: m.AiCoach })));
 
 // Chart loading fallback with fixed height to prevent CLS
@@ -203,7 +203,7 @@ export const DuoDashApp: React.FC = () => {
       return;
     }
 
-    // 立即渲染图表以加快LCP
+    // 立即渲染图表以加快 LCP
     setShouldRenderAboveFoldCharts(true);
   }, [userData]);
 
@@ -270,24 +270,14 @@ export const DuoDashApp: React.FC = () => {
     }
   };
 
-  // 全屏加载页面 - 首次加载时显示
+  // 全屏加载页面 - 首次加载时显示（多邻国猫头鹰风格）
   if (loading && !userData) {
     return (
-      <div className="min-h-screen bg-[#235390] flex flex-col items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-6">
-          {/* Duolingo 风格的加载动画 */}
-          <div className="relative">
-            <div className="w-20 h-20 rounded-full bg-[#58cc02] flex items-center justify-center shadow-lg animate-pulse">
-              <svg className="w-12 h-12 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
-            </div>
-            <div className="absolute inset-0 w-20 h-20 rounded-full border-4 border-white/30 border-t-white animate-spin" />
-          </div>
-          <div className="text-center">
-            <h2 className="text-white text-xl font-bold mb-2">正在加载数据</h2>
-            <p className="text-white/70 text-sm">请稍候...</p>
-          </div>
+      <div className="min-h-screen bg-[#235390] flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl shadow-xl p-12 text-center">
+          <img src="/duo-owl.svg" alt="Duo" width="96" height="96" className="w-24 h-24 mx-auto mb-6 animate-bounce" />
+          <h2 className="text-2xl font-bold text-gray-700 mb-4">正在加载数据...</h2>
+          <p className="text-gray-500">正在连接 Duolingo API</p>
         </div>
       </div>
     );
@@ -328,7 +318,6 @@ export const DuoDashApp: React.FC = () => {
         <PageHeader userData={userData} viewData={viewData} />
 
         <div className="space-y-6">
-          {/* 统计卡片 - 优化为自适应高度 */}
           <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
             <StatCard icon="⚡" value={userData ? viewData.totalXp.toLocaleString() : '—'} label="总经验" colorClass="text-yellow-500" seq={1} />
             <StatCard icon="📅" value={userData ? viewData.accountAgeDays : '—'} label="注册天数" colorClass="text-blue-500" seq={2} />
@@ -336,9 +325,8 @@ export const DuoDashApp: React.FC = () => {
             <StatCard icon="⏱️" value={userData ? viewData.estimatedLearningTime : '—'} label="预估投入" colorClass="text-purple-500" seq={4} isLargeText={false} />
           </div>
 
-          {/* 图表和语言分布 */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className={`lg:col-span-2 grid gap-4 ${viewData.dailyTimeHistory && viewData.dailyTimeHistory.some(d => d.time > 0) ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+          {/* 图表区域 - 两栏并排 */}
+          <div className={`grid gap-4 ${viewData.dailyTimeHistory && viewData.dailyTimeHistory.some(d => d.time > 0) ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
               <div className="bg-white rounded-2xl p-4 shadow-sm border-2 border-b-4 border-gray-200 animate-seq seq-5">
                 <h2 className="text-gray-700 font-bold text-lg mb-3 flex items-center gap-2">
                   <span>⚡</span> 最近 7 天经验
@@ -373,11 +361,11 @@ export const DuoDashApp: React.FC = () => {
                   )}
                 </div>
               )}
-            </div>
-            <CourseList courses={viewData.courses} seq={7} />
           </div>
 
-          {/* AI 点评和今日概览 */}
+          {/* 语言分布 */}
+          <CourseList courses={viewData.courses} seq={7} />
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 animate-seq seq-8">
               {userData ? (
@@ -391,7 +379,6 @@ export const DuoDashApp: React.FC = () => {
             <TodayOverview userData={userData} seq={9} />
           </div>
 
-          {/* 年度学习热力图 */}
           {userData && userData.yearlyXpHistory && userData.yearlyXpHistory.length > 0 && (
             <div
               ref={heatmapSentinelRef}
@@ -410,7 +397,6 @@ export const DuoDashApp: React.FC = () => {
             </div>
           )}
 
-          {/* 成就殿堂 - 独立区域 */}
           {userData && userData.yearlyXpHistory && userData.yearlyXpHistory.length > 0 && (
             <div className="animate-seq seq-11">
               <Suspense fallback={<div className="h-64 w-full bg-gray-100 rounded-2xl animate-pulse" />}>

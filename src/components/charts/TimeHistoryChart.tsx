@@ -1,5 +1,6 @@
 import React from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { DuoColors } from '../../styles/duolingoColors';
 
 export interface TimeHistoryChartProps {
   data: { date: string; time: number }[];
@@ -18,8 +19,8 @@ const TimeHistoryChart: React.FC<TimeHistoryChartProps> = ({ data }) => {
           <AreaChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
             <defs>
               <linearGradient id={`timeGradient-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#1cb0f6" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#1cb0f6" stopOpacity={0} />
+                <stop offset="5%" stopColor={DuoColors.macawBlue} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={DuoColors.macawBlue} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e5e5" />
@@ -32,10 +33,10 @@ const TimeHistoryChart: React.FC<TimeHistoryChartProps> = ({ data }) => {
             <Area
               type="monotone"
               dataKey="time"
-              stroke="#1cb0f6"
+              stroke={DuoColors.macawBlue}
               strokeWidth={3}
               fill={`url(#timeGradient-${gradientId})`}
-              dot={{ r: 3, fill: '#1cb0f6', strokeWidth: 2, stroke: '#fff' }}
+              dot={{ r: 3, fill: DuoColors.macawBlue, strokeWidth: 2, stroke: '#fff' }}
               activeDot={{ r: 5 }}
             />
           </AreaChart>
@@ -43,7 +44,7 @@ const TimeHistoryChart: React.FC<TimeHistoryChartProps> = ({ data }) => {
       </div>
       <div className="text-center text-xs text-gray-500 pb-3">
         本周学习{' '}
-        <span className="text-[#1cb0f6] font-bold">{hours > 0 ? `${hours}小时${mins}分钟` : `${mins}分钟`}</span>
+        <span style={{ color: DuoColors.macawBlue }} className="font-bold">{hours > 0 ? `${hours}小时${mins}分钟` : `${mins}分钟`}</span>
       </div>
     </div>
   );

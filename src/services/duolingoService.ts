@@ -18,7 +18,6 @@ const LEAGUE_TIERS = [
 ];
 
 export const transformDuolingoData = (rawData: DuolingoRawUser): UserData => {
-  // rawData now has all extended fields typed in DuolingoRawUser interface
   const rawAny = rawData;
 
   const streak = rawData.site_streak !== undefined ? rawData.site_streak : rawData.streak;
@@ -64,10 +63,10 @@ export const transformDuolingoData = (rawData: DuolingoRawUser): UserData => {
       }));
   }
 
-  // 2. 检查 merged 的 languages 数组 (来自 V1 API)，如果有 V2 中没有的课程，添加进来
+  // 2. 检查 V1 API 的 languages 数组，合并缺失的课程
   if (rawAny.languages && Array.isArray(rawAny.languages)) {
     const v1Courses = rawAny.languages
-      .filter((l: any) => l.points > 0 || l.current_learning) // 这里如果 Chess 只有 0 XP 且不是 current，可能会被滤掉
+      .filter((l: any) => l.points > 0 || l.current_learning)
       .map((l: any) => ({
         id: l.language,
         title: l.language_string,
@@ -78,8 +77,6 @@ export const transformDuolingoData = (rawData: DuolingoRawUser): UserData => {
       }));
 
     // 合并：如果 courses 中还没有这个语言，则添加
-    // 注意：V2 的 learningLanguage 可能是 'zh'，V1 是 'zh-CN' 或类似的缩写，可以尝试模糊匹配或直接用 title
-    // 这里简单起见，如果 ID 不存在且 Title 不存在，就认为是一个新课程
     v1Courses.forEach((v1c: any) => {
       const exists = courses.some(c =>
         c.title === v1c.title ||
@@ -151,8 +148,7 @@ export const transformDuolingoData = (rawData: DuolingoRawUser): UserData => {
         const d = new Date(summary.date * 1000);
         dateKey = toLocalDateKey(d);
       } else if (typeof summary.date === 'string') {
-        // 已经是字符串格式
-        dateKey = summary.date.replace(/\//g, '-'); // 转换 YYYY/MM/DD 为 YYYY-MM-DD
+        dateKey = summary.date.replace(/\//g, '-');
       } else {
         return;
       }

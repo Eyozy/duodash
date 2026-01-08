@@ -6,9 +6,6 @@ interface NavbarProps {
     onRefresh: () => void;
 }
 
-/**
- * 顶部导航栏组件
- */
 export const Navbar: React.FC<NavbarProps> = ({ loading, lastUpdated, onRefresh }) => {
     return (
         <nav className="bg-white border-b-2 border-gray-200 sticky top-0 z-50">

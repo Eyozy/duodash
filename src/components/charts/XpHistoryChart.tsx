@@ -1,5 +1,6 @@
 import React from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { DuoColors } from '../../styles/duolingoColors';
 
 export interface XpHistoryChartProps {
   data: { date: string; xp: number }[];
@@ -16,8 +17,8 @@ const XpHistoryChart: React.FC<XpHistoryChartProps> = ({ data }) => {
           <AreaChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
             <defs>
               <linearGradient id={`xpGradient-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ffc800" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#ffc800" stopOpacity={0} />
+                <stop offset="5%" stopColor={DuoColors.featherGreen} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={DuoColors.featherGreen} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e5e5" />
@@ -30,17 +31,17 @@ const XpHistoryChart: React.FC<XpHistoryChartProps> = ({ data }) => {
             <Area
               type="monotone"
               dataKey="xp"
-              stroke="#ffc800"
+              stroke={DuoColors.featherGreen}
               strokeWidth={3}
               fill={`url(#xpGradient-${gradientId})`}
-              dot={{ r: 3, fill: '#ffc800', strokeWidth: 2, stroke: '#fff' }}
+              dot={{ r: 3, fill: DuoColors.featherGreen, strokeWidth: 2, stroke: '#fff' }}
               activeDot={{ r: 5 }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
       <div className="text-center text-xs text-gray-500 pb-3">
-        本周共获得 <span className="text-[#e2b100] font-bold">{totalXp}</span> XP
+        本周共获得 <span style={{ color: DuoColors.featherGreen }} className="font-bold">{totalXp}</span> XP
       </div>
     </div>
   );

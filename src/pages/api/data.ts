@@ -6,7 +6,7 @@ export const prerender = false;
 
 const DUOLINGO_BASE_URL = 'https://www.duolingo.com';
 
-// 服务端缓存：30 分钟 TTL，最大 100 条
+// 服务端缓存：30 分钟 TTL
 const cache = new Map<string, CacheEntry<UserData>>();
 const CACHE_TTL = 30 * 60 * 1000; // 30 分钟
 const MAX_CACHE_SIZE = 100;
@@ -81,8 +81,7 @@ export const GET: APIRoute = async () => {
     const userId = userData.id || userData.user_id || userData.tracking_properties?.user_id;
 
     if (userId) {
-      // 这里的 3000ms 超时是为了保证尽量不拖慢主请求，如果超时了，前端会显示空白图表但主数据还在
-      // 实际上 xp_summaries 通常很快
+      // 获取 xp_summaries 数据
       const [xpData] = await Promise.all([
         fetchWithTimeout(`${DUOLINGO_BASE_URL}/2017-06-30/users/${userId}/xp_summaries?startDate=1970-01-01`, headers, 5000)
       ]);
@@ -92,9 +91,7 @@ export const GET: APIRoute = async () => {
       }
     }
 
-    // 3. 为了响应速度，这里只请求 xpSummaries
-
-    // 直接在服务端完成 transform，避免把巨大的原始 JSON 传到前端
+    // 在服务端完成 transform
     const transformed = transformDuolingoData(userData);
 
     // 写入缓存（限制大小）

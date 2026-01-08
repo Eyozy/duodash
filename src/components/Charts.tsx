@@ -1,6 +1,6 @@
 import React from 'react';
+import { DuoColors } from '../styles/duolingoColors';
 
-// 热力图组件 - 支持多年和季度视图
 interface HeatmapChartProps {
   data: { date: string; xp: number; time?: number }[];
 }
@@ -10,10 +10,8 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
   const [selectedQuarter, setSelectedQuarter] = React.useState<number>(Math.ceil((new Date().getMonth() + 1) / 3));
   const [selectedHalf, setSelectedHalf] = React.useState<number>(new Date().getMonth() < 6 ? 1 : 2);
   const [selectedDay, setSelectedDay] = React.useState<{ date: string; xp: number; time?: number; x: number; y: number } | null>(null);
-  // 视图模式：'quarter' | 'half' | 'year'
   const [viewMode, setViewMode] = React.useState<'quarter' | 'half' | 'year'>('year');
 
-  // 检测屏幕宽度，三档断点
   React.useEffect(() => {
     const checkScreenSize = () => {
       const width = window.innerWidth;
@@ -30,7 +28,6 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  // 创建日期到 XP 和时间的映射
   const xpMap = new Map<string, number>();
   const timeMap = new Map<string, number | undefined>();
   data.forEach(d => {
@@ -38,7 +35,6 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
     timeMap.set(d.date, d.time);
   });
 
-  // 获取所有年份
   const years = new Set<number>();
   data.forEach(d => {
     const year = new Date(d.date).getFullYear();
@@ -49,22 +45,18 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
   const sortedYears = Array.from(years).sort((a, b) => b - a);
   if (sortedYears.length === 0) sortedYears.push(new Date().getFullYear());
 
-  // 辅助函数：生成本地日期字符串 YYYY-MM-DD
   const toLocalDateStr = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-  // 根据视图模式决定日期范围
   const getDateRange = () => {
     if (viewMode === 'quarter') {
-      // 季度视图：Q1=1-3 月，Q2=4-6 月，Q3=7-9 月，Q4=10-12 月
       const startMonth = (selectedQuarter - 1) * 3;
       const endMonth = startMonth + 2;
       return {
         start: new Date(selectedYear, startMonth, 1),
-        end: new Date(selectedYear, endMonth + 1, 0) // 该月最后一天
+        end: new Date(selectedYear, endMonth + 1, 0)
       };
     } else if (viewMode === 'half') {
-      // 半年视图：H1=1-6 月，H2=7-12 月
       const startMonth = (selectedHalf - 1) * 6;
       const endMonth = startMonth + 5;
       return {
@@ -72,7 +64,6 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
         end: new Date(selectedYear, endMonth + 1, 0)
       };
     } else {
-      // 全年视图
       return {
         start: new Date(selectedYear, 0, 1),
         end: new Date(selectedYear, 11, 31)
@@ -95,14 +86,11 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
     current.setDate(current.getDate() + 1);
   }
 
-  // 获取当前视图的最大 XP
   const maxXp = Math.max(...allDates.map(d => d.xp), 50);
 
-  // 按周分组（从周日开始）
   const weeks: typeof allDates[] = [];
   let currentWeek: typeof allDates = [];
 
-  // 填充第一周的空白
   const firstDayOfWeek = allDates[0]?.date.getDay() || 0;
   for (let i = 0; i < firstDayOfWeek; i++) {
     currentWeek.push({ date: new Date(0), xp: -1, time: undefined, dateStr: '' });
@@ -122,20 +110,18 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
     weeks.push(currentWeek);
   }
 
-  // 颜色函数
   const getColor = (xp: number) => {
     if (xp < 0) return 'transparent';
-    if (xp === 0) return '#ebedf0';
+    if (xp === 0) return '#EBEDF0';
     const intensity = Math.min(xp / maxXp, 1);
-    if (intensity < 0.25) return '#c6efc6';
-    if (intensity < 0.5) return '#7bc96f';
-    if (intensity < 0.75) return '#58cc02';
-    return '#3d8c00';
+    if (intensity < 0.25) return '#9BE9A8';
+    if (intensity < 0.5) return '#40C463';
+    if (intensity < 0.75) return DuoColors.featherGreen;
+    return '#216E39';
   };
 
   const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 
-  // 计算月份标签位置
   const monthLabels: { month: string; weekIndex: number }[] = [];
   let lastMonth = -1;
   weeks.forEach((week, weekIndex) => {
@@ -149,15 +135,12 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
     }
   });
 
-  // 统计数据
   const viewXp = allDates.reduce((sum, d) => sum + (d.xp > 0 ? d.xp : 0), 0);
   const activeDays = allDates.filter(d => d.xp > 0).length;
 
   return (
     <div className="w-full">
-      {/* 年份和季度选择器 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-        {/* 年份选择 */}
         <div className="flex items-center gap-2 flex-wrap">
           {sortedYears.map(year => (
             <button
@@ -173,7 +156,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
           ))}
         </div>
 
-        {/* 季度选择 - 仅在小屏幕 (< 640px)显示 */}
+        {/* 季度选择 - 小屏幕 */}
         {viewMode === 'quarter' && (
           <div className="flex items-center gap-1">
             {[1, 2, 3, 4].map(q => (
@@ -191,7 +174,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
           </div>
         )}
 
-        {/* 半年选择 - 仅在中等屏幕 (640px-1024px) 显示 */}
+        {/* 半年选择 - 中等屏幕 */}
         {viewMode === 'half' && (
           <div className="flex items-center gap-1">
             {[1, 2].map(h => (
@@ -210,8 +193,8 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
         )}
       </div>
 
-      <div className="w-full pb-2">
-        <div className="relative w-full">
+      <div className="w-full pb-2 overflow-hidden">
+        <div className="relative w-full overflow-hidden">
           {/* 月份标签 */}
           <div className="flex ml-4 mb-1 text-xs text-gray-600 h-4 relative w-full">
             {monthLabels.map((label, idx) => (
@@ -231,7 +214,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
           <div
             className="grid gap-[1px] lg:gap-[2px] relative w-full"
             style={{
-              gridTemplateColumns: `16px repeat(${weeks.length}, 1fr)`,
+              gridTemplateColumns: `16px repeat(${weeks.length}, minmax(0, 1fr))`,
             }}
           >
             {/* 星期标签列 */}
@@ -250,11 +233,12 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
               week.map((day, dayIdx) => (
                 <div
                   key={`${weekIdx}-${dayIdx}`}
-                  className="aspect-square w-full rounded-sm cursor-pointer hover:ring-2 hover:ring-[#58cc02] transition-all"
+                  className="w-full rounded-sm cursor-pointer hover:ring-2 hover:ring-[#58cc02] transition-all"
                   style={{
                     backgroundColor: getColor(day.xp),
                     gridColumn: weekIdx + 2,
-                    gridRow: dayIdx + 1
+                    gridRow: dayIdx + 1,
+                    paddingBottom: '100%',
                   }}
                   onClick={(e) => {
                     if (day.xp >= 0 && day.dateStr) {
@@ -275,7 +259,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
               ))
             ))}
 
-            {/* 点击后显示的详情弹窗 */}
+            {/* 详情弹窗 */}
             {selectedDay && (
               <div
                 className="absolute z-50 bg-gray-800 text-white px-3 py-2 rounded-lg shadow-lg text-sm pointer-events-none"
@@ -295,7 +279,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
             )}
           </div>
 
-          {/* 点击空白处关闭弹窗 */}
+          {/* 关闭弹窗的遮罩 */}
           {selectedDay && (
             <div className="fixed inset-0 z-40" onClick={() => setSelectedDay(null)}></div>
           )}
@@ -305,28 +289,28 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({ data }) => {
             <div className="text-xs text-gray-500">
               {viewMode === 'quarter' ? (
                 <>
-                  {selectedYear} Q{selectedQuarter} 学习 <span className="text-[#58cc02] font-bold">{activeDays}</span> 天，
-                  获得 <span className="text-[#ffc800] font-bold">{viewXp.toLocaleString()}</span> XP
+                  {selectedYear} Q{selectedQuarter} 学习 <span style={{ color: DuoColors.featherGreen }} className="font-bold">{activeDays}</span> 天，
+                  获得 <span style={{ color: DuoColors.beeYellow }} className="font-bold">{viewXp.toLocaleString()}</span> XP
                 </>
               ) : viewMode === 'half' ? (
                 <>
-                  {selectedYear} {selectedHalf === 1 ? '上半年' : '下半年'}学习 <span className="text-[#58cc02] font-bold">{activeDays}</span> 天，
-                  获得 <span className="text-[#ffc800] font-bold">{viewXp.toLocaleString()}</span> XP
+                  {selectedYear} {selectedHalf === 1 ? '上半年' : '下半年'}学习 <span style={{ color: DuoColors.featherGreen }} className="font-bold">{activeDays}</span> 天，
+                  获得 <span style={{ color: DuoColors.beeYellow }} className="font-bold">{viewXp.toLocaleString()}</span> XP
                 </>
               ) : (
                 <>
-                  {selectedYear} 年学习 <span className="text-[#58cc02] font-bold">{activeDays}</span> 天，
-                  获得 <span className="text-[#ffc800] font-bold">{viewXp.toLocaleString()}</span> XP
+                  {selectedYear} 年学习 <span style={{ color: DuoColors.featherGreen }} className="font-bold">{activeDays}</span> 天，
+                  获得 <span style={{ color: DuoColors.beeYellow }} className="font-bold">{viewXp.toLocaleString()}</span> XP
                 </>
               )}
             </div>
             <div className="flex items-center gap-1 text-xs text-gray-500">
               <span>少</span>
-              <div className="w-[10px] h-[10px] rounded-sm" style={{ backgroundColor: '#ebedf0' }} />
-              <div className="w-[10px] h-[10px] rounded-sm" style={{ backgroundColor: '#c6efc6' }} />
-              <div className="w-[10px] h-[10px] rounded-sm" style={{ backgroundColor: '#7bc96f' }} />
-              <div className="w-[10px] h-[10px] rounded-sm" style={{ backgroundColor: '#58cc02' }} />
-              <div className="w-[10px] h-[10px] rounded-sm" style={{ backgroundColor: '#3d8c00' }} />
+              <div className="w-[10px] h-[10px] rounded-sm" style={{ backgroundColor: '#EBEDF0' }} />
+              <div className="w-[10px] h-[10px] rounded-sm" style={{ backgroundColor: '#9BE9A8' }} />
+              <div className="w-[10px] h-[10px] rounded-sm" style={{ backgroundColor: '#40C463' }} />
+              <div className="w-[10px] h-[10px] rounded-sm" style={{ backgroundColor: DuoColors.featherGreen }} />
+              <div className="w-[10px] h-[10px] rounded-sm" style={{ backgroundColor: '#216E39' }} />
               <span>多</span>
             </div>
           </div>

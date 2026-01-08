@@ -57,7 +57,7 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
   if (body.byteLength < MIN_BYTES_TO_COMPRESS || body.byteLength > MAX_BYTES_TO_COMPRESS) return response;
 
   const gzipped = gzipSync(body, { level: 6 });
-  // 不值得压缩：收益太小
+  // 压缩效果不明显，直接返回
   if (gzipped.byteLength >= body.byteLength * 0.95) return response;
 
   const headers = new Headers(response.headers);
