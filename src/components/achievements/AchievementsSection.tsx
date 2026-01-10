@@ -14,6 +14,8 @@ interface Achievement {
   tier: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
 }
 
+type TierKey = Achievement['tier'];
+
 const ACHIEVEMENTS: Achievement[] = [
   { id: 'streak7', icon: 'flame', name: '初露锋芒', description: '连续学习 7 天', threshold: 7, unit: '天', category: 'streak', tier: 'bronze' },
   { id: 'streak30', icon: 'flame', name: '持之以恒', description: '连续学习 30 天', threshold: 30, unit: '天', category: 'streak', tier: 'silver' },
@@ -34,82 +36,55 @@ const ACHIEVEMENTS: Achievement[] = [
   { id: 'totalXp500000', icon: 'diamond', name: '语言大师', description: '累计获得 50 万 XP', threshold: 500000, unit: 'XP', category: 'totalXp', tier: 'diamond' },
 ];
 
-const TIER_STYLES = {
-  bronze: {
-    bg: AchievementTiers.bronze.primary,
-    bgLight: AchievementTiers.bronze.bg,
-    border: AchievementTiers.bronze.secondary,
-    text: AchievementTiers.bronze.text,
-    label: '青铜',
-  },
-  silver: {
-    bg: AchievementTiers.silver.primary,
-    bgLight: AchievementTiers.silver.bg,
-    border: AchievementTiers.silver.secondary,
-    text: AchievementTiers.silver.text,
-    label: '白银',
-  },
-  gold: {
-    bg: AchievementTiers.gold.primary,
-    bgLight: AchievementTiers.gold.bg,
-    border: AchievementTiers.gold.secondary,
-    text: AchievementTiers.gold.text,
-    label: '黄金',
-  },
-  platinum: {
-    bg: AchievementTiers.platinum.primary,
-    bgLight: AchievementTiers.platinum.bg,
-    border: AchievementTiers.platinum.secondary,
-    text: AchievementTiers.platinum.text,
-    label: '铂金',
-  },
-  diamond: {
-    bg: AchievementTiers.diamond.primary,
-    bgLight: AchievementTiers.diamond.bg,
-    border: AchievementTiers.diamond.secondary,
-    text: AchievementTiers.diamond.text,
-    label: '钻石',
-  },
+const TIER_STYLES: Record<TierKey, { bg: string; bgLight: string; border: string; text: string; label: string }> = {
+  bronze: { bg: AchievementTiers.bronze.primary, bgLight: AchievementTiers.bronze.bg, border: AchievementTiers.bronze.secondary, text: AchievementTiers.bronze.text, label: '青铜' },
+  silver: { bg: AchievementTiers.silver.primary, bgLight: AchievementTiers.silver.bg, border: AchievementTiers.silver.secondary, text: AchievementTiers.silver.text, label: '白银' },
+  gold: { bg: AchievementTiers.gold.primary, bgLight: AchievementTiers.gold.bg, border: AchievementTiers.gold.secondary, text: AchievementTiers.gold.text, label: '黄金' },
+  platinum: { bg: AchievementTiers.platinum.primary, bgLight: AchievementTiers.platinum.bg, border: AchievementTiers.platinum.secondary, text: AchievementTiers.platinum.text, label: '铂金' },
+  diamond: { bg: AchievementTiers.diamond.primary, bgLight: AchievementTiers.diamond.bg, border: AchievementTiers.diamond.secondary, text: AchievementTiers.diamond.text, label: '钻石' },
 };
 
 interface AchievementsSectionProps {
   data: { date: string; xp: number; time?: number }[];
 }
 
-export const AchievementsSection: React.FC<AchievementsSectionProps> = ({ data }) => {
+function renderIcon(iconName: AchievementIconType, className?: string): React.ReactNode {
+  const IconComponent = AchievementIconMap[iconName];
+  return IconComponent ? <IconComponent className={className} /> : null;
+}
+
+export function AchievementsSection({ data }: AchievementsSectionProps): React.ReactElement {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [displayedId, setDisplayedId] = useState<string | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const achievementStats = useAchievementStats(data);
 
   const badgeStatus = useMemo(() => {
     return ACHIEVEMENTS.map(achievement => {
       let current = 0;
-      let unlocked = false;
       let unlockedDate: string | null = null;
 
       switch (achievement.category) {
         case 'streak':
           current = achievementStats.maxStreak;
-          unlocked = current >= achievement.threshold;
           unlockedDate = achievementStats.streakMilestones[achievement.threshold] || null;
           break;
         case 'dailyXp':
           current = achievementStats.maxDailyXp;
-          unlocked = current >= achievement.threshold;
           unlockedDate = achievementStats.dailyXpMilestones[achievement.threshold] || null;
           break;
         case 'totalDays':
           current = achievementStats.totalDays;
-          unlocked = current >= achievement.threshold;
           unlockedDate = achievementStats.totalDaysMilestones[achievement.threshold] || null;
           break;
         case 'totalXp':
           current = achievementStats.totalXp;
-          unlocked = current >= achievement.threshold;
           unlockedDate = achievementStats.totalXpMilestones[achievement.threshold] || null;
           break;
       }
+
+      const unlocked = current >= achievement.threshold;
 
       return {
         ...achievement,
@@ -123,35 +98,22 @@ export const AchievementsSection: React.FC<AchievementsSectionProps> = ({ data }
 
   const totalUnlocked = badgeStatus.filter(b => b.unlocked).length;
   const totalBadges = badgeStatus.length;
-  const selectedBadge = selectedId ? badgeStatus.find(b => b.id === selectedId) : null;
   const displayedBadge = displayedId ? badgeStatus.find(b => b.id === displayedId) : null;
   const isExpanded = selectedId !== null;
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
     if (selectedId) {
       setDisplayedId(selectedId);
     } else {
-      timeoutRef.current = setTimeout(() => {
-        setDisplayedId(null);
-      }, 300);
+      timeoutRef.current = setTimeout(() => setDisplayedId(null), 300);
     }
 
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [selectedId]);
-
-  const renderIcon = (iconName: AchievementIconType, className?: string) => {
-    const IconComponent = AchievementIconMap[iconName];
-    return IconComponent ? <IconComponent className={className} /> : null;
-  };
 
   return (
     <div className="space-y-6">

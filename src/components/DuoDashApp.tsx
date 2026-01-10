@@ -1,41 +1,28 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import type { UserData } from '../types';
 import { LoginScreen } from './LoginScreen';
 import { Navbar, PageHeader, StatCard, CourseList, TodayOverview } from './dashboard';
 
-// Lazy load heavy chart components for better initial load
 const LazyXpHistoryChart = lazy(() => import('./charts/XpHistoryChart'));
 const LazyTimeHistoryChart = lazy(() => import('./charts/TimeHistoryChart'));
 const LazyHeatmapChart = lazy(() => import('./Charts').then(m => ({ default: m.HeatmapChart })));
 const LazyAchievementsSection = lazy(() => import('./achievements/AchievementsSection'));
 const LazyAiCoach = lazy(() => import('./AiCoach').then(m => ({ default: m.AiCoach })));
 
-// Chart loading fallback with fixed height to prevent CLS
-const ChartSkeleton = () => (
-  <div className="h-40 w-full bg-gray-100 rounded-xl animate-pulse flex items-center justify-center" style={{ minHeight: '160px' }}>
-    <span className="text-gray-600 text-sm">加载中...</span>
-  </div>
-);
+function ChartSkeleton(): React.ReactElement {
+  return (
+    <div className="h-40 w-full bg-gray-100 rounded-xl animate-pulse flex items-center justify-center" style={{ minHeight: '160px' }}>
+      <span className="text-gray-600 text-sm">加载中...</span>
+    </div>
+  );
+}
 
-// 入场动画样式 - 优化为更快的动画，减少延迟
-const animationStyles = `
+const ANIMATION_STYLES = `
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
-.animate-seq {
-  animation: fadeInUp 0.2s ease-out forwards;
-  opacity: 0;
-}
-
-/* 缩短动画延迟 - 每个间隔 100ms */
+.animate-seq { animation: fadeInUp 0.2s ease-out forwards; opacity: 0; }
 .seq-1 { animation-delay: 0s; }
 .seq-2 { animation-delay: 0.1s; }
 .seq-3 { animation-delay: 0.15s; }
@@ -100,7 +87,7 @@ const PLACEHOLDER_DATA: UserData = {
   yearlyXpHistory: [],
 };
 
-export const DuoDashApp: React.FC = () => {
+export function DuoDashApp(): React.ReactElement {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,19 +96,17 @@ export const DuoDashApp: React.FC = () => {
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [shouldRenderHeatmap, setShouldRenderHeatmap] = useState(false);
   const [shouldRenderAboveFoldCharts, setShouldRenderAboveFoldCharts] = useState(false);
-  const heatmapSentinelRef = React.useRef<HTMLDivElement | null>(null);
+  const heatmapSentinelRef = useRef<HTMLDivElement | null>(null);
 
-  // 自动加载数据
   useEffect(() => {
-    const loadData = async () => {
+    async function loadData(): Promise<void> {
       try {
         let hasLocalCache = false;
         try {
           const cached = localStorage.getItem('duodash:userData');
           const cachedTs = localStorage.getItem('duodash:userDataTs');
           if (cached) {
-            const parsed = JSON.parse(cached) as UserData;
-            setUserData(parsed);
+            setUserData(JSON.parse(cached) as UserData);
             setIsConfigured(true);
             setShowLogin(false);
             hasLocalCache = true;
@@ -134,17 +119,13 @@ export const DuoDashApp: React.FC = () => {
         await new Promise<void>(resolve => setTimeout(resolve, 0));
 
         const dataRes = await fetch('/api/data');
-
-        if (dataRes.status === 400) {
-          const res = await dataRes.json();
-          if (res.error === 'Not configured') {
-            if (!hasLocalCache) setShowLogin(true);
-            setLoading(false);
-            return;
-          }
-        }
-
         const result = await dataRes.json();
+
+        if (dataRes.status === 400 && result.error === 'Not configured') {
+          if (!hasLocalCache) setShowLogin(true);
+          setLoading(false);
+          return;
+        }
 
         if (result.data) {
           const next = result.data as UserData;
@@ -158,26 +139,22 @@ export const DuoDashApp: React.FC = () => {
           } catch {
             // ignore persistence errors
           }
-        } else {
-          if (result.error !== 'Not configured') {
-            setError(result.error || '加载数据失败');
-            setIsConfigured(true);
-          }
+        } else if (result.error !== 'Not configured') {
+          setError(result.error || '加载数据失败');
+          setIsConfigured(true);
         }
       } catch {
         setError('连接服务器失败');
       } finally {
         setLoading(false);
       }
-    };
+    }
 
     loadData();
   }, []);
 
-  // 热力图懒加载
   useEffect(() => {
-    if (!userData?.yearlyXpHistory || userData.yearlyXpHistory.length === 0) return;
-    if (shouldRenderHeatmap) return;
+    if (!userData?.yearlyXpHistory?.length || shouldRenderHeatmap) return;
 
     const el = heatmapSentinelRef.current;
     if (!el) return;
@@ -196,18 +173,11 @@ export const DuoDashApp: React.FC = () => {
     return () => observer.disconnect();
   }, [userData?.yearlyXpHistory?.length, shouldRenderHeatmap]);
 
-  // 图表立即渲染优化
   useEffect(() => {
-    if (!userData) {
-      setShouldRenderAboveFoldCharts(false);
-      return;
-    }
-
-    // 立即渲染图表以加快 LCP
-    setShouldRenderAboveFoldCharts(true);
+    setShouldRenderAboveFoldCharts(!!userData);
   }, [userData]);
 
-  const handleConnect = async (username: string, jwt: string) => {
+  async function handleConnect(username: string, jwt: string): Promise<void> {
     setLoading(true);
     setError(null);
     try {
@@ -220,29 +190,36 @@ export const DuoDashApp: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleJsonInput = (jsonStr: string) => {
-    (async () => {
-      try {
-        const { transformDuolingoData } = await import('../services/duolingoService');
-        const raw = JSON.parse(jsonStr);
-        const userObj = raw.users ? raw.users[0] : raw;
-        const transformed = transformDuolingoData(userObj);
-        setUserData(transformed);
-        setShowLogin(false);
-      } catch {
-        setError("JSON 格式无效。请确保你复制了完整的页面内容。");
-      }
-    })();
-  };
+  function handleJsonInput(jsonStr: string): void {
+    setLoading(true);
+    setError(null);
+    import('../services/duolingoService')
+      .then(({ transformDuolingoData }) => {
+        try {
+          const raw = JSON.parse(jsonStr);
+          const userObj = raw.users ? raw.users[0] : raw;
+          setUserData(transformDuolingoData(userObj));
+          setShowLogin(false);
+        } catch {
+          setError("JSON 格式无效。请确保你复制了完整的页面内容。");
+        }
+      })
+      .catch(() => {
+        setError("加载数据处理模块失败，请刷新页面重试。");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }
 
-  const handleDemo = () => {
+  function handleDemo(): void {
     setUserData(DEMO_DATA);
     setShowLogin(false);
-  };
+  }
 
-  const handleRefresh = async () => {
+  async function handleRefresh(): Promise<void> {
     setLoading(true);
     setError(null);
     try {
@@ -268,9 +245,8 @@ export const DuoDashApp: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  // 全屏加载页面 - 首次加载时显示（多邻国猫头鹰风格）
   if (loading && !userData) {
     return (
       <div className="min-h-screen bg-[#235390] flex items-center justify-center p-4">
@@ -283,7 +259,6 @@ export const DuoDashApp: React.FC = () => {
     );
   }
 
-  // 错误页面
   if (!userData && isConfigured && error) {
     return (
       <div className="min-h-screen bg-[#235390] flex items-center justify-center p-4">
@@ -292,8 +267,10 @@ export const DuoDashApp: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-700 mb-4">连接失败</h2>
           <p className="text-red-500 mb-6">{error}</p>
           <p className="text-gray-700 text-sm mb-6">请检查环境变量中的 DUOLINGO_USERNAME 和 DUOLINGO_JWT 配置是否正确</p>
-          <button onClick={() => window.location.reload()}
-            className="bg-[#58cc02] text-white font-bold py-3 px-6 rounded-xl hover:bg-[#4caf00]">
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-[#58cc02] text-white font-bold py-3 px-6 rounded-xl hover:bg-[#4caf00]"
+          >
             重试
           </button>
         </div>
@@ -301,16 +278,25 @@ export const DuoDashApp: React.FC = () => {
     );
   }
 
-  // 登录页面
   if (!userData && showLogin) {
-    return <LoginScreen onConnect={handleConnect} onJsonInput={handleJsonInput} onDemo={handleDemo} loading={loading} error={error} />;
+    return (
+      <LoginScreen
+        onConnect={handleConnect}
+        onJsonInput={handleJsonInput}
+        onDemo={handleDemo}
+        loading={loading}
+        error={error}
+      />
+    );
   }
 
   const viewData = userData ?? PLACEHOLDER_DATA;
+  const hasTimeHistory = viewData.dailyTimeHistory?.some(d => d.time > 0);
+  const hasYearlyHistory = userData?.yearlyXpHistory?.length;
 
   return (
     <div className="min-h-screen bg-[#f7f7f7]">
-      <style>{animationStyles}</style>
+      <style>{ANIMATION_STYLES}</style>
 
       <Navbar loading={loading} lastUpdated={lastUpdated} onRefresh={handleRefresh} />
 
@@ -325,45 +311,35 @@ export const DuoDashApp: React.FC = () => {
             <StatCard icon="⏱️" value={userData ? viewData.estimatedLearningTime : '—'} label="预估投入" colorClass="text-purple-500" seq={4} isLargeText={false} />
           </div>
 
-          {/* 图表区域 - 两栏并排 */}
-          <div className={`grid gap-4 ${viewData.dailyTimeHistory && viewData.dailyTimeHistory.some(d => d.time > 0) ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-              <div className="bg-white rounded-2xl p-4 shadow-sm border-2 border-b-4 border-gray-200 animate-seq seq-5">
+          <div className={`grid gap-4 ${hasTimeHistory ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+            <div className="bg-white rounded-2xl p-4 shadow-sm border-2 border-b-4 border-gray-200 animate-seq seq-5">
+              <h2 className="text-gray-700 font-bold text-lg mb-3 flex items-center gap-2">
+                <span>⚡</span> 最近 7 天经验
+              </h2>
+              {userData && shouldRenderAboveFoldCharts ? (
+                <Suspense fallback={<ChartSkeleton />}>
+                  <LazyXpHistoryChart data={viewData.dailyXpHistory} />
+                </Suspense>
+              ) : (
+                <ChartSkeleton />
+              )}
+            </div>
+            {hasTimeHistory && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm border-2 border-b-4 border-gray-200 animate-seq seq-6">
                 <h2 className="text-gray-700 font-bold text-lg mb-3 flex items-center gap-2">
-                  <span>⚡</span> 最近 7 天经验
+                  <span>⏱️</span> 最近 7 天学习时间
                 </h2>
-                {userData ? (
-                  shouldRenderAboveFoldCharts ? (
-                    <Suspense fallback={<ChartSkeleton />}>
-                      <LazyXpHistoryChart data={viewData.dailyXpHistory} />
-                    </Suspense>
-                  ) : (
-                    <ChartSkeleton />
-                  )
+                {userData && shouldRenderAboveFoldCharts ? (
+                  <Suspense fallback={<ChartSkeleton />}>
+                    <LazyTimeHistoryChart data={viewData.dailyTimeHistory!} />
+                  </Suspense>
                 ) : (
                   <ChartSkeleton />
                 )}
               </div>
-              {viewData.dailyTimeHistory && viewData.dailyTimeHistory.some(d => d.time > 0) && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm border-2 border-b-4 border-gray-200 animate-seq seq-6">
-                  <h2 className="text-gray-700 font-bold text-lg mb-3 flex items-center gap-2">
-                    <span>⏱️</span> 最近 7 天学习时间
-                  </h2>
-                  {userData ? (
-                    shouldRenderAboveFoldCharts ? (
-                      <Suspense fallback={<ChartSkeleton />}>
-                        <LazyTimeHistoryChart data={viewData.dailyTimeHistory} />
-                      </Suspense>
-                    ) : (
-                      <ChartSkeleton />
-                    )
-                  ) : (
-                    <ChartSkeleton />
-                  )}
-                </div>
-              )}
+            )}
           </div>
 
-          {/* 语言分布 */}
           <CourseList courses={viewData.courses} seq={7} />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -379,7 +355,7 @@ export const DuoDashApp: React.FC = () => {
             <TodayOverview userData={userData} seq={9} />
           </div>
 
-          {userData && userData.yearlyXpHistory && userData.yearlyXpHistory.length > 0 && (
+          {hasYearlyHistory && (
             <div
               ref={heatmapSentinelRef}
               className="bg-white rounded-2xl p-6 shadow-sm border-2 border-b-4 border-gray-200 animate-seq seq-10"
@@ -387,7 +363,7 @@ export const DuoDashApp: React.FC = () => {
               <h2 className="text-gray-700 font-bold text-xl mb-4">📅 年度学习热力图</h2>
               {shouldRenderHeatmap ? (
                 <Suspense fallback={<div className="h-48 w-full bg-gray-100 rounded-xl animate-pulse" />}>
-                  <LazyHeatmapChart data={userData.yearlyXpHistory} />
+                  <LazyHeatmapChart data={userData!.yearlyXpHistory!} />
                 </Suspense>
               ) : (
                 <div className="h-48 w-full bg-gray-50 rounded-xl flex items-center justify-center text-gray-600 text-sm">
@@ -397,10 +373,10 @@ export const DuoDashApp: React.FC = () => {
             </div>
           )}
 
-          {userData && userData.yearlyXpHistory && userData.yearlyXpHistory.length > 0 && (
+          {hasYearlyHistory && (
             <div className="animate-seq seq-11">
               <Suspense fallback={<div className="h-64 w-full bg-gray-100 rounded-2xl animate-pulse" />}>
-                <LazyAchievementsSection data={userData.yearlyXpHistory} />
+                <LazyAchievementsSection data={userData!.yearlyXpHistory!} />
               </Suspense>
             </div>
           )}
@@ -408,6 +384,6 @@ export const DuoDashApp: React.FC = () => {
       </main>
     </div>
   );
-};
+}
 
 export default DuoDashApp;

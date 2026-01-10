@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId, useMemo } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { DuoColors } from '../../styles/duolingoColors';
 
@@ -6,11 +6,27 @@ export interface TimeHistoryChartProps {
   data: { date: string; time: number }[];
 }
 
-const TimeHistoryChart: React.FC<TimeHistoryChartProps> = ({ data }) => {
-  const totalTime = data.reduce((sum, d) => sum + d.time, 0);
-  const hours = Math.floor(totalTime / 60);
-  const mins = totalTime % 60;
-  const gradientId = React.useId();
+const tooltipStyle = {
+  borderRadius: '12px',
+  border: 'none',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+  fontSize: 12
+} as const;
+
+const dotStyle = { r: 3, fill: DuoColors.macawBlue, strokeWidth: 2, stroke: '#fff' } as const;
+const activeDotStyle = { r: 5 } as const;
+
+function TimeHistoryChart({ data }: TimeHistoryChartProps): React.ReactElement {
+  const { totalTime, formattedTime } = useMemo(() => {
+    const total = data.reduce((sum, d) => sum + d.time, 0);
+    const hours = Math.floor(total / 60);
+    const mins = total % 60;
+    return {
+      totalTime: total,
+      formattedTime: hours > 0 ? `${hours}小时${mins}分钟` : `${mins}分钟`
+    };
+  }, [data]);
+  const gradientId = useId();
 
   return (
     <div className="w-full min-w-0">
@@ -27,7 +43,7 @@ const TimeHistoryChart: React.FC<TimeHistoryChartProps> = ({ data }) => {
             <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 10 }} dy={5} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 10 }} width={40} domain={[0, 'auto']} />
             <Tooltip
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }}
+              contentStyle={tooltipStyle}
               formatter={(value: number) => [`${value} 分钟`, '学习时间']}
             />
             <Area
@@ -36,18 +52,17 @@ const TimeHistoryChart: React.FC<TimeHistoryChartProps> = ({ data }) => {
               stroke={DuoColors.macawBlue}
               strokeWidth={3}
               fill={`url(#timeGradient-${gradientId})`}
-              dot={{ r: 3, fill: DuoColors.macawBlue, strokeWidth: 2, stroke: '#fff' }}
-              activeDot={{ r: 5 }}
+              dot={dotStyle}
+              activeDot={activeDotStyle}
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
       <div className="text-center text-xs text-gray-500 pb-3">
-        本周学习{' '}
-        <span style={{ color: DuoColors.macawBlue }} className="font-bold">{hours > 0 ? `${hours}小时${mins}分钟` : `${mins}分钟`}</span>
+        本周学习 <span style={{ color: DuoColors.macawBlue }} className="font-bold">{formattedTime}</span>
       </div>
     </div>
   );
-};
+}
 
-export default TimeHistoryChart;
+export default React.memo(TimeHistoryChart);

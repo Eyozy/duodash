@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { UserData } from '../types';
 import { analyzeUserStats, getAiInfo } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
@@ -7,50 +7,47 @@ interface AiCoachProps {
   userData: UserData;
 }
 
-export const AiCoach: React.FC<AiCoachProps> = ({ userData }) => {
+export function AiCoach({ userData }: AiCoachProps): React.ReactElement {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [aiInfo, setAiInfo] = useState({ provider: 'loading...', model: '' });
-  const rootRef = React.useRef<HTMLDivElement | null>(null);
   const [shouldAutoFetch, setShouldAutoFetch] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const fetchAnalysis = async () => {
-      setLoading(true);
-      const result = await analyzeUserStats(userData);
-      setAnalysis(result);
-      const info = await getAiInfo();
-      setAiInfo(info);
-      setLoading(false);
-    };
-
-    if (!userData) return;
-    if (!shouldAutoFetch) return;
+    if (!userData || !shouldAutoFetch) return;
 
     let cancelled = false;
-    const run = async () => {
-      if (cancelled) return;
-      await fetchAnalysis();
-    };
 
-    // 避免占用首屏主线程：可用则在空闲时执行
-    const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void, opts?: { timeout: number }) => number);
-    const cic = (window as any).cancelIdleCallback as undefined | ((id: number) => void);
-    let idleId: number | null = null;
+    async function fetchAnalysis(): Promise<void> {
+      if (cancelled) return;
+      setLoading(true);
+      const [result, info] = await Promise.all([
+        analyzeUserStats(userData),
+        getAiInfo()
+      ]);
+      if (!cancelled) {
+        setAnalysis(result);
+        setAiInfo(info);
+        setLoading(false);
+      }
+    }
+
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
+    const cic = (window as unknown as { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback;
 
     if (ric) {
-      idleId = ric(() => { void run(); }, { timeout: 1500 });
-    } else {
-      const t = window.setTimeout(() => { void run(); }, 300);
+      const idleId = ric(() => void fetchAnalysis(), { timeout: 1500 });
       return () => {
         cancelled = true;
-        window.clearTimeout(t);
+        cic?.(idleId);
       };
     }
 
+    const timerId = window.setTimeout(() => void fetchAnalysis(), 300);
     return () => {
       cancelled = true;
-      if (idleId !== null && cic) cic(idleId);
+      window.clearTimeout(timerId);
     };
   }, [userData, shouldAutoFetch]);
 
@@ -59,19 +56,19 @@ export const AiCoach: React.FC<AiCoachProps> = ({ userData }) => {
     const el = rootRef.current;
     if (!el) return;
 
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some(e => e.isIntersecting)) {
-        setShouldAutoFetch(true);
-        observer.disconnect();
-      }
-    }, { rootMargin: '200px' });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some(e => e.isIntersecting)) {
+          setShouldAutoFetch(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '200px' }
+    );
 
     observer.observe(el);
     return () => observer.disconnect();
   }, [shouldAutoFetch]);
-
-  const providerName = aiInfo.provider;
-  const modelName = aiInfo.model;
 
   return (
     <div ref={rootRef} className="bg-white rounded-2xl shadow-sm border-2 border-b-4 border-gray-200 overflow-hidden h-full flex flex-col">
@@ -111,14 +108,21 @@ export const AiCoach: React.FC<AiCoachProps> = ({ userData }) => {
         </div>
         <div className="mt-auto pt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div className="text-xs text-gray-600 font-bold order-2 sm:order-1">
-            {providerName}: {modelName}
+            {aiInfo.provider}: {aiInfo.model}
           </div>
           <button
-            onClick={async () => {
+            onClick={() => {
               setLoading(true);
-              const result = await analyzeUserStats(userData);
-              setAnalysis(result);
-              setLoading(false);
+              analyzeUserStats(userData)
+                .then(result => {
+                  setAnalysis(result);
+                })
+                .catch(() => {
+                  setAnalysis("刷新失败，请稍后重试。");
+                })
+                .finally(() => {
+                  setLoading(false);
+                });
             }}
             disabled={loading}
             className="w-full sm:w-auto order-1 sm:order-2 bg-[#1cb0f6] hover:bg-[#1899d6] text-white font-bold py-2 px-4 rounded-xl border-b-4 border-[#1480b3] active:border-b-0 active:translate-y-1 transition-all disabled:opacity-50 text-sm"

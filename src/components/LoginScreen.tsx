@@ -8,13 +8,15 @@ interface LoginScreenProps {
   error: string | null;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onConnect, onJsonInput, onDemo, loading, error }) => {
+type LoginMode = 'creds' | 'json';
+
+export function LoginScreen({ onConnect, onJsonInput, onDemo, loading, error }: LoginScreenProps): React.ReactElement {
   const [username, setUsername] = useState('');
   const [jwt, setJwt] = useState('');
-  const [mode, setMode] = useState<'creds' | 'json'>('json');
+  const [mode, setMode] = useState<LoginMode>('json');
   const [jsonInput, setJsonInput] = useState('');
 
-  const getJsonUrl = () => `https://www.duolingo.com/users/${username.trim() || 'YOUR_USERNAME'}`;
+  const jsonUrl = `https://www.duolingo.com/users/${username.trim() || 'YOUR_USERNAME'}`;
 
   return (
     <div className="min-h-screen bg-[#235390] flex items-center justify-center p-4">
@@ -71,7 +73,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onConnect, onJsonInput
                 <div className="flex gap-2">
                   <input type="text" placeholder="你的用户名" value={username} onChange={(e) => setUsername(e.target.value)}
                     className="flex-1 bg-white border border-gray-300 rounded-lg px-2 py-1 text-sm font-bold text-gray-700" aria-label="用户名" />
-                  <a href={getJsonUrl()} target="_blank" rel="noopener noreferrer"
+                  <a href={jsonUrl} target="_blank" rel="noopener noreferrer"
                     className="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold py-2 px-3 rounded-lg flex items-center">打开数据页 ↗</a>
                 </div>
               </div>

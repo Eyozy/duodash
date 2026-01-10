@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId, useMemo } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { DuoColors } from '../../styles/duolingoColors';
 
@@ -6,9 +6,19 @@ export interface XpHistoryChartProps {
   data: { date: string; xp: number }[];
 }
 
-const XpHistoryChart: React.FC<XpHistoryChartProps> = ({ data }) => {
-  const totalXp = data.reduce((sum, d) => sum + d.xp, 0);
-  const gradientId = React.useId();
+const tooltipStyle = {
+  borderRadius: '12px',
+  border: 'none',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+  fontSize: 12
+} as const;
+
+const dotStyle = { r: 3, fill: DuoColors.featherGreen, strokeWidth: 2, stroke: '#fff' } as const;
+const activeDotStyle = { r: 5 } as const;
+
+function XpHistoryChart({ data }: XpHistoryChartProps): React.ReactElement {
+  const totalXp = useMemo(() => data.reduce((sum, d) => sum + d.xp, 0), [data]);
+  const gradientId = useId();
 
   return (
     <div className="w-full min-w-0">
@@ -25,7 +35,7 @@ const XpHistoryChart: React.FC<XpHistoryChartProps> = ({ data }) => {
             <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 10 }} dy={5} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 10 }} width={40} domain={[0, 'auto']} />
             <Tooltip
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }}
+              contentStyle={tooltipStyle}
               formatter={(value: number) => [`${value} XP`, '经验值']}
             />
             <Area
@@ -34,8 +44,8 @@ const XpHistoryChart: React.FC<XpHistoryChartProps> = ({ data }) => {
               stroke={DuoColors.featherGreen}
               strokeWidth={3}
               fill={`url(#xpGradient-${gradientId})`}
-              dot={{ r: 3, fill: DuoColors.featherGreen, strokeWidth: 2, stroke: '#fff' }}
-              activeDot={{ r: 5 }}
+              dot={dotStyle}
+              activeDot={activeDotStyle}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -45,6 +55,6 @@ const XpHistoryChart: React.FC<XpHistoryChartProps> = ({ data }) => {
       </div>
     </div>
   );
-};
+}
 
-export default XpHistoryChart;
+export default React.memo(XpHistoryChart);
