@@ -7,7 +7,6 @@ export interface Course {
   id: string;
 }
 
-
 export interface DailyStats {
   date: string;
   xp: number;
@@ -64,14 +63,8 @@ export interface DuolingoCalendarEvent {
   event_type?: string;
 }
 
-export interface DuolingoRawCourse {
-  title: string;
-  xp: number;
-  fromLanguage: string;
-  learningLanguage: string;
-  crowns: number;
-  id: string;
-}
+/** API 返回的原始课程数据，与 Course 结构相同 */
+export type DuolingoRawCourse = Course;
 
 export interface DuolingoLanguageDataDetail {
   points: number;
@@ -198,13 +191,8 @@ export interface XpSummary {
   totalSessionTime: number;
 }
 
-// XP Gain event
-export interface XpGain {
-  time: number;
-  xp: number;
-  skillId?: string;
-  eventType?: string;
-}
+/** 标准化的 XP 获取事件，与 DuolingoXpGain 结构相同 */
+export type XpGain = DuolingoXpGain;
 
 // Cache entry for API responses
 export interface CacheEntry<T> {
