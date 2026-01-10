@@ -101,14 +101,44 @@ npm run preview
 
 ## 环境变量
 
-| 变量名              | 必填 | 说明                                                                                    |
-| ------------------- | :--: | --------------------------------------------------------------------------------------- |
-| `DUOLINGO_USERNAME` |  是  | Duolingo 用户名                                                                         |
-| `DUOLINGO_JWT`      |  是  | Duolingo JWT Token                                                                      |
-| `AI_PROVIDER`       |  是  | AI 服务商：`gemini` / `openrouter` / `deepseek` / `siliconflow` / `moonshot` / `custom` |
-| `AI_API_KEY`        |  是  | AI 服务 API Key                                                                         |
-| `AI_MODEL`          |  是  | AI 模型名称，如 `gemini-pro`                                                            |
-| `AI_BASE_URL`       |  否  | 自定义 AI 服务地址（`custom` 模式使用）                                                 |
+| 变量名              | 必填 | 说明                                                |
+| :------------------ | :--: | :-------------------------------------------------- |
+| `DUOLINGO_USERNAME` |  是  | Duolingo 用户名                                     |
+| `DUOLINGO_JWT`      |  是  | Duolingo JWT Token                                  |
+| `AI_PROVIDER`       |  是  | AI 服务商 (`gemini` / `openrouter` / `deepseek` 等) |
+| `AI_API_KEY`        |  是  | AI 服务 API Key                                     |
+| `AI_MODEL`          |  是  | AI 模型名称 (如 `gemini-pro`)                       |
+| `AI_BASE_URL`       |  否  | 自定义 API 地址 (仅 `custom` 模式需要)              |
+| `API_SECRET_TOKEN`  |  是  | API 访问控制令牌 (建议设置以保护 AI 额度)           |
+
+## API 访问控制
+
+为了保护你的 AI 额度和数据安全，建议在 `.env.local` 中设置 `API_SECRET_TOKEN`。设置后，API 将需要此令牌才能访问。
+
+### 访问方式
+
+#### 方法一：URL 参数访问（最简单）
+
+在浏览器地址栏直接访问数据时，在链接末尾添加 `?token=你的令牌`。
+
+- 示例：`http://localhost:4321/api/data?token=my-secret-123`
+
+#### 方法二：浏览器控制台调试
+
+如果你在已部署的页面，想通过控制台快速查看数据，可以按 F12 打开控制台输入：
+
+```javascript
+fetch("/api/data?token=你的令牌")
+  .then((res) => res.json())
+  .then(console.log);
+```
+
+### 如何验证？
+
+1. 在 `.env.local` 中添加一行：`API_SECRET_TOKEN=你的密码`。
+2. 重启项目 (`npm run dev`)。
+3. **验证失败情况**：尝试直接访问 `http://localhost:4321/api/data` -> 页面应显示 `{"error":"Unauthorized"}`。
+4. **验证成功情况**：尝试带令牌访问 `http://localhost:4321/api/data?token=你的密码` -> 应能正常看到 JSON 数据。
 
 ## 获取 JWT Token
 
@@ -149,13 +179,14 @@ document.cookie.match(new RegExp('(^| )jwt_token=([^;]+)'))[0].slice(11)
 
 ## 数据来源
 
-DuoDash 通过 Duolingo 非官方 API 获取数据：
+DuoDash 通过调用 Duolingo 官方提供的非官方接口获取数据：
 
-| 接口                                         | 数据内容                           |
-| -------------------------------------------- | ---------------------------------- |
-| `/2017-06-30/users`                          | 用户信息、连胜、XP、宝石、课程列表 |
-| `/2017-06-30/users/{id}/xp_summaries`        | 每日 XP 和学习时长                 |
-| `/2017-06-30/users/{id}/leaderboard_history` | 段位赛历史                         |
+- **用户基础信息**：包含连胜天数、当前经验值、宝石数量、已选课程列表等  
+  `https://www.duolingo.com/2017-06-30/users`
+- **每日学习明细**：包含每日 XP 增长曲线、实际学习时长统计  
+  `https://www.duolingo.com/2017-06-30/users/{id}/xp_summaries`
+- **排行榜赛况**：包含历史段位表现、当前联赛名次  
+  `https://www.duolingo.com/2017-06-30/users/{id}/leaderboard_history`
 
 ### 数据字段说明
 
@@ -180,6 +211,14 @@ DuoDash 通过 Duolingo 非官方 API 获取数据：
 ### JWT Token 过期
 
 如遇数据加载失败或「Invalid JWT」错误，请重新获取 Token。
+
+### 日期或热力图显示不准确？
+
+仪表盘会自动根据你的浏览器时区转换 Duolingo 的 UTC 数据。如果你发现日期偏移，可以按以下步骤验证本地时区：
+
+1. 打开浏览器开发者工具 (F12) → **Console**
+2. 输入命令并回车：`new Intl.DateTimeFormat().resolvedOptions().timeZone`
+3. 确认返回的值是否匹配你当前所在的地理位置。
 
 ### AI 点评不显示
 
