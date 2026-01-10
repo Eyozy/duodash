@@ -51,6 +51,18 @@ export function createAuthChecker(getSecretToken: () => string) {
   return function checkToken(request: Request): boolean {
     const secretToken = getSecretToken();
 
+    // 0. 检查 URL query parameter (方便浏览器直接调试)
+    try {
+      const url = new URL(request.url);
+      const urlToken = url.searchParams.get('token');
+      if (urlToken) {
+        if (!secretToken) return false;
+        return timingSafeEqual(urlToken, secretToken);
+      }
+    } catch {
+      // 忽略 URL 解析错误
+    }
+
     // 1. 检查 Authorization header (Bearer token)
     // 只要提供了 Token，就必须验证其正确性
     const authHeader = request.headers.get('Authorization');
