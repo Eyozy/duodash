@@ -79,9 +79,10 @@ DUOLINGO_USERNAME=your_duolingo_username
 DUOLINGO_JWT=your_jwt_token_here
 
 # AI 服务配置
-AI_PROVIDER=gemini
+AI_PROVIDER=openrouter
 AI_API_KEY=your_api_key
-AI_MODEL=gemini-pro
+AI_MODEL=mistralai/ministral-3b
+API_SECRET_TOKEN=your_api_secret_token_here
 ```
 
 ### 运行
@@ -101,15 +102,15 @@ npm run preview
 
 ## 环境变量
 
-| 变量名              | 必填 | 说明                                                |
-| :------------------ | :--: | :-------------------------------------------------- |
-| `DUOLINGO_USERNAME` |  是  | Duolingo 用户名                                     |
-| `DUOLINGO_JWT`      |  是  | Duolingo JWT Token                                  |
-| `AI_PROVIDER`       |  是  | AI 服务商 (`gemini` / `openrouter` / `deepseek` 等) |
-| `AI_API_KEY`        |  是  | AI 服务 API Key                                     |
-| `AI_MODEL`          |  是  | AI 模型名称 (如 `gemini-pro`)                       |
-| `AI_BASE_URL`       |  否  | 自定义 API 地址 (仅 `custom` 模式需要)              |
-| `API_SECRET_TOKEN`  |  是  | API 访问控制令牌 (建议设置以保护 AI 额度)           |
+| 变量名              | 必填 | 说明                 |
+| :------------------ | :--: | :------------------- |
+| `DUOLINGO_USERNAME` |  是  | Duolingo 用户名      |
+| `DUOLINGO_JWT`      |  是  | Duolingo JWT Token   |
+| `AI_PROVIDER`       |  是  | AI 服务商            |
+| `AI_API_KEY`        |  是  | AI 服务 API Key      |
+| `AI_MODEL`          |  是  | AI 模型名称          |
+| `AI_BASE_URL`       |  否  | 仅 `custom` 模式需要 |
+| `API_SECRET_TOKEN`  |  是  | API 访问控制令牌     |
 
 ## API 访问控制
 
@@ -197,7 +198,7 @@ DuoDash 通过调用 Duolingo 官方提供的非官方接口获取数据：
 | 宝石数量     | 优先使用 `trackingProperties.gems` |
 | 当前段位     | 映射 `leaderboard_league` 到中文   |
 | 注册天数     | 当前日期 - 注册日期                |
-| 预估投入时间 | `totalXp / 6`（假设每分钟 6 XP）   |
+| 预估投入时间 | `totalXp / 6` （假设每分钟 6 XP）  |
 
 ### 缓存策略
 
