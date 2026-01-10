@@ -1,64 +1,72 @@
 import type { MiddlewareHandler } from 'astro';
-import { gzipSync } from 'node:zlib';
+import { gzip } from 'node:zlib';
+import { promisify } from 'node:util';
 
-const MIN_BYTES_TO_COMPRESS = 1024;
-const MAX_BYTES_TO_COMPRESS = 3 * 1024 * 1024;
+const gzipAsync = promisify(gzip);
 
-function isCompressible(contentType: string | null) {
+const MIN_COMPRESS_SIZE = 1024;
+const MAX_COMPRESS_SIZE = 3 * 1024 * 1024;
+
+const COMPRESSIBLE_TYPES = new Set([
+  'application/json',
+  'application/javascript',
+  'text/javascript',
+  'text/css',
+  'image/svg+xml',
+  'application/xml',
+  'application/xhtml+xml',
+]);
+
+function isCompressible(contentType: string | null): boolean {
   if (!contentType) return false;
   const type = contentType.split(';', 1)[0].trim().toLowerCase();
-  return (
-    type.startsWith('text/') ||
-    type === 'application/json' ||
-    type === 'application/javascript' ||
-    type === 'text/javascript' ||
-    type === 'text/css' ||
-    type === 'image/svg+xml' ||
-    type === 'application/xml' ||
-    type === 'application/xhtml+xml'
-  );
+  return type.startsWith('text/') || COMPRESSIBLE_TYPES.has(type);
 }
 
-function appendVary(headers: Headers, value: string) {
+function appendVary(headers: Headers, value: string): void {
   const existing = headers.get('Vary');
   if (!existing) {
     headers.set('Vary', value);
     return;
   }
-  const parts = existing.split(',').map(s => s.trim().toLowerCase());
+  const parts = existing.split(',').map((s) => s.trim().toLowerCase());
   if (!parts.includes(value.toLowerCase())) {
     headers.set('Vary', `${existing}, ${value}`);
   }
 }
 
-export const onRequest: MiddlewareHandler = async (context, next) => {
+function isInCompressRange(size: number): boolean {
+  return size >= MIN_COMPRESS_SIZE && size <= MAX_COMPRESS_SIZE;
+}
+
+export const onRequest: MiddlewareHandler = async function (context, next) {
+  const { request } = context;
   const response = await next();
+  const method = request.method;
 
-  if (context.request.method !== 'GET' && context.request.method !== 'HEAD') return response;
+  if (method !== 'GET' && method !== 'HEAD') return response;
 
-  const acceptEncoding = context.request.headers.get('accept-encoding') || '';
+  const acceptEncoding = request.headers.get('accept-encoding') ?? '';
   if (!acceptEncoding.toLowerCase().includes('gzip')) return response;
   if (response.headers.has('Content-Encoding')) return response;
+  if (!isCompressible(response.headers.get('Content-Type'))) return response;
 
-  const contentType = response.headers.get('Content-Type');
-  if (!isCompressible(contentType)) return response;
-
-  const contentLengthHeader = response.headers.get('Content-Length');
-  const contentLength = contentLengthHeader ? Number(contentLengthHeader) : null;
-  if (contentLength !== null && Number.isFinite(contentLength)) {
-    if (contentLength < MIN_BYTES_TO_COMPRESS || contentLength > MAX_BYTES_TO_COMPRESS) return response;
-  }
-
-  if (context.request.method === 'HEAD') {
+  const contentLength = Number(response.headers.get('Content-Length'));
+  if (Number.isFinite(contentLength) && !isInCompressRange(contentLength)) {
     return response;
   }
 
-  const body = new Uint8Array(await response.arrayBuffer());
-  if (body.byteLength < MIN_BYTES_TO_COMPRESS || body.byteLength > MAX_BYTES_TO_COMPRESS) return response;
+  if (method === 'HEAD') return response;
 
-  const gzipped = gzipSync(body, { level: 6 });
-  // 压缩效果不明显，直接返回
-  if (gzipped.byteLength >= body.byteLength * 0.95) return response;
+  const body = new Uint8Array(await response.arrayBuffer());
+  if (!isInCompressRange(body.byteLength)) {
+    return new Response(body, response);
+  }
+
+  const gzipped = await gzipAsync(body, { level: 6 });
+  if (gzipped.byteLength >= body.byteLength * 0.95) {
+    return new Response(body, response);
+  }
 
   const headers = new Headers(response.headers);
   headers.set('Content-Encoding', 'gzip');

@@ -1,54 +1,48 @@
 import type { APIRoute } from 'astro';
 import type { CacheEntry, UserData } from '../../types';
 import { transformDuolingoData } from '../../services/duolingoService';
+import { getEnv, jsonResponse, createAuthChecker } from '../../utils/api-helpers';
 
 export const prerender = false;
 
 const DUOLINGO_BASE_URL = 'https://www.duolingo.com';
-
-// 服务端缓存：30 分钟 TTL
-const cache = new Map<string, CacheEntry<UserData>>();
-const CACHE_TTL = 30 * 60 * 1000; // 30 分钟
+const CACHE_TTL = 30 * 60 * 1000;
 const MAX_CACHE_SIZE = 100;
 
-// Helper to fetch with timeout
-const fetchWithTimeout = async (url: string, headers: HeadersInit, timeoutMs: number = 3000): Promise<any> => {
+const cache = new Map<string, CacheEntry<UserData>>();
+
+const checkToken = createAuthChecker(() => getEnv('API_SECRET_TOKEN'));
+
+async function fetchWithTimeout(url: string, headers: HeadersInit, timeoutMs = 3000): Promise<unknown> {
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, { headers, signal: controller.signal });
-    clearTimeout(id);
+    clearTimeout(timeoutId);
     if (!res.ok) return null;
     return await res.json();
-  } catch (e) {
-    clearTimeout(id);
+  } catch {
+    clearTimeout(timeoutId);
     return null;
   }
-};
+}
 
-export const GET: APIRoute = async () => {
-  // Vercel 运行时需要用 process.env
-  const username = process.env.DUOLINGO_USERNAME || import.meta.env.DUOLINGO_USERNAME || '';
-  const jwt = process.env.DUOLINGO_JWT || import.meta.env.DUOLINGO_JWT || '';
-
-  if (!username || !jwt) {
-    return new Response(JSON.stringify({ error: 'Not configured' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json; charset=utf-8' }
-    });
+export const GET: APIRoute = async ({ request }) => {
+  if (!checkToken(request)) {
+    return jsonResponse({ error: 'Unauthorized' }, 401);
   }
 
-  // 检查缓存
+  const username = getEnv('DUOLINGO_USERNAME');
+  const jwt = getEnv('DUOLINGO_JWT');
+
+  if (!username || !jwt) {
+    return jsonResponse({ error: 'Not configured' }, 400);
+  }
+
   const cacheKey = `user:${username}`;
   const cached = cache.get(cacheKey);
-  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-    return new Response(JSON.stringify({ data: cached.data, cached: true }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'private, max-age=60',
-      }
-    });
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return jsonResponse({ data: cached.data, cached: true }, 200, 'private, max-age=60');
   }
 
   try {
@@ -60,7 +54,7 @@ export const GET: APIRoute = async () => {
 
     // 1) 优先请求 V2（字段更全且稳定），失败再降级到 V1
     const v2Url = `${DUOLINGO_BASE_URL}/2017-06-30/users?username=${username}`;
-    const v2Raw = await fetchWithTimeout(v2Url, headers, 4500);
+    const v2Raw = await fetchWithTimeout(v2Url, headers, 4500) as { users?: any[] } | any;
     const v2Data = v2Raw?.users?.[0] || v2Raw; // V2 returns { users: [...] } usually
 
     let userData = v2Data;
@@ -71,50 +65,37 @@ export const GET: APIRoute = async () => {
     }
 
     if (!userData) {
-      return new Response(JSON.stringify({ error: 'Failed to fetch user data' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json; charset=utf-8' }
-      });
+      return jsonResponse({ error: 'Failed to fetch user data' }, 500);
     }
 
-    // 2. 获取用户 ID 并并行请求 XP Summaries (核心数据，必须有)
     const userId = userData.id || userData.user_id || userData.tracking_properties?.user_id;
-
     if (userId) {
-      // 获取 xp_summaries 数据
-      const [xpData] = await Promise.all([
-        fetchWithTimeout(`${DUOLINGO_BASE_URL}/2017-06-30/users/${userId}/xp_summaries?startDate=1970-01-01`, headers, 5000)
-      ]);
+      const xpData = await fetchWithTimeout(
+        `${DUOLINGO_BASE_URL}/2017-06-30/users/${userId}/xp_summaries?startDate=1970-01-01`,
+        headers,
+        5000
+      ) as { summaries?: unknown[] } | null;
 
       if (xpData?.summaries) {
         userData._xpSummaries = xpData.summaries;
       }
     }
 
-    // 在服务端完成 transform
+    if (!userData || typeof userData !== 'object') {
+      return jsonResponse({ error: 'Received invalid user data from Duolingo' }, 502);
+    }
+
     const transformed = transformDuolingoData(userData);
 
-    // 写入缓存（限制大小）
     if (cache.size >= MAX_CACHE_SIZE) {
-      // 删除最旧的条目
       const oldestKey = cache.keys().next().value;
       if (oldestKey) cache.delete(oldestKey);
     }
     cache.set(cacheKey, { data: transformed, timestamp: Date.now() });
 
-    return new Response(JSON.stringify({ data: transformed }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'private, max-age=60',
-      }
-    });
-
+    return jsonResponse({ data: transformed }, 200, 'private, max-age=60');
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json; charset=utf-8' }
-    });
+    return jsonResponse({ error: message }, 500);
   }
 };
