@@ -6,12 +6,13 @@ const LEAGUE_TIERS = [
 ];
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
+const DEFAULT_TIMEZONE = 'Asia/Shanghai';
 
 /**
  * 将 Date 对象转换为 YYYY-MM-DD 格式的本地日期键
  * 为了保证一致性，默认使用 'Asia/Shanghai' 时区
  */
-function toLocalDateKey(date: Date, timeZone: string = 'Asia/Shanghai'): string {
+function toLocalDateKey(date: Date, timeZone: string = DEFAULT_TIMEZONE): string {
   try {
     const formatter = new Intl.DateTimeFormat('en-CA', {
       year: 'numeric',
@@ -27,6 +28,39 @@ function toLocalDateKey(date: Date, timeZone: string = 'Asia/Shanghai'): string 
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
+}
+
+/**
+ * 获取指定时区的当天开始时间戳（毫秒）
+ * 使用与 toLocalDateKey 相同的时区，确保一致性
+ */
+function getStartOfDayInTimezone(date: Date, timeZone: string = DEFAULT_TIMEZONE): number {
+  const dateKey = toLocalDateKey(date, timeZone);
+  // 构造该时区的午夜时间
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    timeZoneName: 'shortOffset'
+  });
+  const parts = formatter.formatToParts(date);
+  const offsetPart = parts.find(p => p.type === 'timeZoneName')?.value || '+08:00';
+  // 解析偏移量，如 "GMT+8" -> "+08:00"
+  const offsetMatch = offsetPart.match(/GMT([+-])(\d+)/);
+  const offset = offsetMatch
+    ? `${offsetMatch[1]}${offsetMatch[2].padStart(2, '0')}:00`
+    : '+08:00';
+  return new Date(`${dateKey}T00:00:00${offset}`).getTime();
+}
+
+/**
+ * 将 xpSummary 的日期字段解析为日期键
+ * 统一处理数字时间戳和字符串日期格式
+ */
+function parseSummaryDateKey(date: number | string): string {
+  if (typeof date === 'number') {
+    return toLocalDateKey(new Date(date * 1000));
+  }
+  const utcDate = new Date(String(date).replace(/\//g, '-') + 'T00:00:00Z');
+  return toLocalDateKey(utcDate);
 }
 
 function getStartOfDay(date: Date): Date {
@@ -214,15 +248,8 @@ export function transformDuolingoData(rawData: DuolingoRawUser): UserData {
 
   if (rawAny._xpSummaries?.length) {
     for (const summary of rawAny._xpSummaries) {
-      let dateKey: string;
-      if (typeof summary.date === 'number') {
-        dateKey = toLocalDateKey(new Date(summary.date * 1000));
-      } else if (typeof summary.date === 'string') {
-        const utcDate = new Date(summary.date.replace(/\//g, '-') + 'T00:00:00Z');
-        dateKey = toLocalDateKey(utcDate);
-      } else {
-        continue;
-      }
+      const dateKey = parseSummaryDateKey(summary.date);
+      if (!dateKey) continue;
 
       const gainedXp = summary.gainedXp ?? summary.gained_xp ?? 0;
       xpByDate.set(dateKey, gainedXp);
@@ -265,47 +292,71 @@ export function transformDuolingoData(rawData: DuolingoRawUser): UserData {
   const hasItemPremium = rawAny.has_item_premium_subscription || rawAny.has_item_immersive_subscription;
   const isPlus = !!(rawData.hasPlus || rawData.hasSuper || rawData.plusStatus === 'active' || rawAny.has_plus || rawAny.is_plus || hasInventoryPremium || hasItemPremium);
 
-  const visibleTotalXp = courses.reduce((acc, c) => acc + c.xp, 0);
-  const totalMinutes = Math.floor(visibleTotalXp / 6);
-  const estimatedLearningTime = `${Math.floor(totalMinutes / 60)}小时 ${totalMinutes % 60}分钟`;
+  // 计算总学习时间：仅使用 xp_summaries 中的真实 totalSessionTime
+  let totalMinutes = 0;
+  let hasRealTimeData = false;
+  if (rawAny._xpSummaries?.length) {
+    const totalSeconds = rawAny._xpSummaries.reduce((acc: number, s: any) =>
+      acc + (s.totalSessionTime ?? s.total_session_time ?? 0), 0);
+    totalMinutes = Math.floor(totalSeconds / 60);
+    hasRealTimeData = totalSeconds > 0;
+  }
+  const estimatedLearningTime = hasRealTimeData
+    ? `${Math.floor(totalMinutes / 60)}小时 ${totalMinutes % 60}分钟`
+    : '暂无数据';
 
   let xpToday = 0;
   let lessonsToday = 0;
   const streakExtendedToday = rawAny.streak_extended_today ?? rawAny.streakExtendedToday ?? false;
 
   const now = new Date();
-  const localTodayStart = getStartOfDay(now).getTime();
+  const localTodayStart = getStartOfDayInTimezone(now);
   const localTodayEnd = localTodayStart + MS_PER_DAY;
   const localTodayDateKey = toLocalDateKey(now);
 
   const streakExtendedTime = resolveStreakExtendedTime(streakExtendedToday, rawAny, rawData, localTodayStart);
 
-  const todayXpFromHistory = xpByDate.get(localTodayDateKey) || 0;
-
-  if (rawAny.xp_today !== undefined) {
-    xpToday = rawAny.xp_today;
-  } else if (todayXpFromHistory > 0) {
-    xpToday = todayXpFromHistory;
-  } else if (rawAny.streakData?.currentStreak?.endDate) {
-    const streakEndTs = new Date(rawAny.streakData.currentStreak.endDate).getTime();
-    if (streakEndTs >= localTodayStart && streakEndTs < localTodayEnd) {
-      xpToday = rawAny.streakData.currentStreak.lastExtendedDate ? 1 : 0;
-    }
-  } else if (rawData.calendar?.length) {
-    const todayEvents = rawData.calendar.filter(e =>
-      e.datetime >= localTodayStart && e.datetime < localTodayEnd
+  // 优先从 xpSummaries 获取今日数据（包含官方统计的 numSessions）
+  if (rawAny._xpSummaries?.length) {
+    const todaySummary = rawAny._xpSummaries.find((s: any) =>
+      parseSummaryDateKey(s.date) === localTodayDateKey
     );
-    xpToday = todayEvents.reduce((acc, e) => acc + (e.improvement || 0), 0);
-    lessonsToday = todayEvents.length;
+    if (todaySummary) {
+      xpToday = todaySummary.gainedXp ?? todaySummary.gained_xp ?? 0;
+      lessonsToday = todaySummary.numSessions ?? 0;
+    }
   }
 
+  // 备用：从其他数据源获取
+  if (xpToday === 0) {
+    const todayXpFromHistory = xpByDate.get(localTodayDateKey) || 0;
+
+    if (rawAny.xp_today !== undefined) {
+      xpToday = rawAny.xp_today;
+    } else if (todayXpFromHistory > 0) {
+      xpToday = todayXpFromHistory;
+    } else if (rawAny.streakData?.currentStreak?.endDate) {
+      const streakEndTs = new Date(rawAny.streakData.currentStreak.endDate).getTime();
+      if (streakEndTs >= localTodayStart && streakEndTs < localTodayEnd) {
+        xpToday = rawAny.streakData.currentStreak.lastExtendedDate ? 1 : 0;
+      }
+    } else if (rawData.calendar?.length) {
+      const todayEvents = rawData.calendar.filter(e =>
+        e.datetime >= localTodayStart && e.datetime < localTodayEnd
+      );
+      xpToday = todayEvents.reduce((acc, e) => acc + (e.improvement || 0), 0);
+      if (lessonsToday === 0) lessonsToday = todayEvents.length;
+    }
+  }
+
+  // 最终备用：从 xpGains 获取
   if (xpToday === 0 && rawAny.xpGains?.length) {
     const todayGains = rawAny.xpGains.filter((g: any) => {
       const gainTs = g.time * 1000;
       return gainTs >= localTodayStart && gainTs < localTodayEnd;
     });
     xpToday = todayGains.reduce((acc: number, g: any) => acc + (g.xp || 0), 0);
-    lessonsToday = todayGains.length;
+    if (lessonsToday === 0) lessonsToday = todayGains.length;
   }
 
   return {
@@ -345,13 +396,6 @@ async function fetchXpSummaries(userId: number, jwt: string): Promise<any[]> {
   }
 }
 
-async function fetchLeaderboardHistory(userId: number, jwt: string): Promise<any> {
-  try {
-    return await fetchFromProxy('leaderboard_history', { userId: userId.toString() }, jwt);
-  } catch {
-    return null;
-  }
-}
 
 export async function fetchDuolingoData(username: string, jwt: string): Promise<UserData> {
   const data = await fetchFromProxy('users', { username }, jwt);
@@ -363,13 +407,8 @@ export async function fetchDuolingoData(username: string, jwt: string): Promise<
   const userId = rawData.id || rawData.user_id || rawData.tracking_properties?.user_id;
 
   if (userId && jwt) {
-    const [xpSummaries, lbHistory] = await Promise.all([
-      fetchXpSummaries(userId, jwt),
-      fetchLeaderboardHistory(userId, jwt)
-    ]);
-
+    const xpSummaries = await fetchXpSummaries(userId, jwt);
     if (xpSummaries.length > 0) rawData._xpSummaries = xpSummaries;
-    if (lbHistory) rawData._leaderboardHistory = lbHistory;
   }
 
   return transformDuolingoData(rawData);
