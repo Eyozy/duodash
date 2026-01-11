@@ -183,22 +183,20 @@ document.cookie.match(new RegExp('(^| )jwt_token=([^;]+)'))[0].slice(11)
 DuoDash 通过调用 Duolingo 官方提供的非官方接口获取数据：
 
 - **用户基础信息**：包含连胜天数、当前经验值、宝石数量、已选课程列表等  
-  `https://www.duolingo.com/2017-06-30/users`
-- **每日学习明细**：包含每日 XP 增长曲线、实际学习时长统计  
-  `https://www.duolingo.com/2017-06-30/users/{id}/xp_summaries`
-- **排行榜赛况**：包含历史段位表现、当前联赛名次  
-  `https://www.duolingo.com/2017-06-30/users/{id}/leaderboard_history`
+  `https://www.duolingo.com/2017-06-30/users?username={username}`
+- **每日学习明细**：包含每日 XP 增长曲线、实际学习时长统计
+  `https://www.duolingo.com/2017-06-30/users/{id}/xp_summaries?startDate=1970-01-01`
 
 ### 数据字段说明
 
-| 展示项       | 计算逻辑                           |
-| ------------ | ---------------------------------- |
-| 连胜天数     | 直接从 API 获取                    |
-| 总经验       | 所有课程 XP 求和                   |
-| 宝石数量     | 优先使用 `trackingProperties.gems` |
-| 当前段位     | 映射 `leaderboard_league` 到中文   |
-| 注册天数     | 当前日期 - 注册日期                |
-| 预估投入时间 | `totalXp / 6` （假设每分钟 6 XP）  |
+| 展示项     | 计算逻辑                                                                        |
+| ---------- | ------------------------------------------------------------------------------- |
+| 连胜天数   | 直接读取 `site_streak` 或 `streak` 字段                                         |
+| 总经验     | 优先读取 `total_xp`，否则遍历 `courses` 求和                                    |
+| 宝石数量   | 优先级：`gemsTotalCount` > `totalGems` > `gems` > `trackingProperties.gems`     |
+| 当前段位   | 读取 `trackingProperties.leaderboard_league` 并映射为中文段位名                 |
+| 注册天数   | 当前日期 - `creation_date`（时间戳转换）                                        |
+| 总投入时间 | 汇总 `xp_summaries` 中所有 `totalSessionTime`（秒）÷ 60，无数据时显示"暂无数据" |
 
 ### 缓存策略
 
