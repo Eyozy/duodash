@@ -48,6 +48,10 @@ function buildResponse(analysis: string, config: AiConfig): Response {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  if (!checkToken(request)) {
+    return jsonResponse({ error: 'Unauthorized' }, 401);
+  }
+
   const config = getEnvConfig();
 
   if (!config.apiKey) {
@@ -93,18 +97,23 @@ export const POST: APIRoute = async ({ request }) => {
       const cleaned = str
         .replace(/[\x00-\x1F\x7F]/g, '') // 移除控制字符
         .replace(/[\\`$#{}[\]<>|;'"]/g, '') // 移除危险字符
-        .replace(/\b(ignore|forget|disregard|override|system|prompt|instruction)/gi, '') // 移除常见注入关键词
+        .replace(/\b(ignore|forget|disregard|override|system|prompt|instruction|jailbreak|pretend|roleplay|act\s+as|you\s+are|new\s+instructions?|bypass|escape)/gi, '') // 移除常见注入关键词
         .trim();
       return cleaned.substring(0, maxLen);
+    };
+
+    // 验证布尔值
+    const sanitizeBool = (val: unknown): boolean => {
+      return val === true || val === 'true';
     };
 
     const userPrompt = `
 这是用户的学习数据（不要在回复中提及任何用户身份信息）：
 - 注册时长：${sanitize(userData.accountAgeDays, 10)} 天
-- 会员状态：${userData.isPlus ? "Super 会员" : "免费用户"}
+- 会员状态：${sanitizeBool(userData.isPlus) ? "Super 会员" : "免费用户"}
 - 连胜天数：${sanitize(userData.streak, 10)} 天
 - 总经验值：${sanitize(userData.totalXp, 15)} XP
-- 课程数量：${Math.min(Number(userData.courses?.length || 0), 20)} 门
+- 课程数量：${Math.min(Math.max(0, Number(userData.courses?.length) || 0), 20)} 门
 - 当前学习：${sanitize(userData.learningLanguage, 20)}
     `;
 

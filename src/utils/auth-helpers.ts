@@ -2,17 +2,21 @@ import crypto from 'node:crypto';
 
 /**
  * 恒定时间比较，防止时序攻击
+ * 使用固定长度填充确保长度差异不泄露信息
  */
 export function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
+  // 固定填充长度，防止长度泄露
+  const maxLen = 128;
+  const aPadded = a.padEnd(maxLen, '\0');
+  const bPadded = b.padEnd(maxLen, '\0');
 
   try {
-    return crypto.timingSafeEqual(
-      Buffer.from(a),
-      Buffer.from(b)
+    const result = crypto.timingSafeEqual(
+      Buffer.from(aPadded),
+      Buffer.from(bPadded)
     );
+    // 额外检查原始长度是否相等
+    return result && a.length === b.length;
   } catch {
     return false;
   }
@@ -27,8 +31,8 @@ export function isSameOrigin(request: Request): boolean {
   const requestOrigin = origin || referer;
 
   if (!requestOrigin) {
-    // 无 origin/referer 时，可能是服务端渲染或直接请求，允许通过
-    return true;
+    // 无 origin/referer 时，仅在开发环境允许通过
+    return process.env.NODE_ENV === 'development';
   }
 
   try {
