@@ -1,3 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <text x="50" y="55" text-anchor="middle" dominant-baseline="middle" font-size="75">🦉</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- 背景：Feather Green 圆角矩形 -->
+  <rect width="128" height="128" rx="30" fill="#58CC02"/>
+  
+  <!-- 左眼 -->
+  <circle cx="44" cy="56" r="26" fill="#FFFFFF"/>
+  <circle cx="44" cy="56" r="10" fill="#4B4B4B"/>
+  
+  <!-- 右眼 -->
+  <circle cx="84" cy="56" r="26" fill="#FFFFFF"/>
+  <circle cx="84" cy="56" r="10" fill="#4B4B4B"/>
+  
+  <!-- 喙：Fox Orange -->
+  <path d="M52 84 Q64 100 76 84 L64 76 Z" fill="#FF9600" stroke="#FF9600" stroke-width="4" stroke-linejoin="round"/>
+  
+  <!-- 高光细节：增加一点立体感 -->
+  <circle cx="48" cy="52" r="3" fill="#FFFFFF" fill-opacity="0.8"/>
+  <circle cx="88" cy="52" r="3" fill="#FFFFFF" fill-opacity="0.8"/>
 </svg>
