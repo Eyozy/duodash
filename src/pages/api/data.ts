@@ -8,22 +8,25 @@ export const prerender = false;
 const DUOLINGO_BASE_URL = 'https://www.duolingo.com';
 const CACHE_TTL = 30 * 60 * 1000;
 const MAX_CACHE_SIZE = 100;
+const DEFAULT_TIMEOUT = 8000; // 增加默认超时时间
 
 const cache = new Map<string, CacheEntry<UserData>>();
 
 const checkToken = createAuthChecker(() => getEnv('API_SECRET_TOKEN'));
 
-async function fetchWithTimeout(url: string, headers: HeadersInit, timeoutMs = 3000): Promise<unknown> {
+async function fetchWithTimeout(url: string, headers: HeadersInit, timeoutMs = DEFAULT_TIMEOUT): Promise<{ data: unknown; status: number }> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, { headers, signal: controller.signal });
     clearTimeout(timeoutId);
-    if (!res.ok) return null;
-    return await res.json();
+    if (!res.ok) {
+      return { data: null, status: res.status };
+    }
+    return { data: await res.json(), status: res.status };
   } catch {
     clearTimeout(timeoutId);
-    return null;
+    return { data: null, status: 0 };
   }
 }
 
@@ -54,14 +57,32 @@ export const GET: APIRoute = async ({ request }) => {
 
     // 1) 优先请求 V2（字段更全且稳定），失败再降级到 V1
     const v2Url = `${DUOLINGO_BASE_URL}/2017-06-30/users?username=${username}`;
-    const v2Raw = await fetchWithTimeout(v2Url, headers, 4500) as { users?: any[] } | any;
-    const v2Data = v2Raw?.users?.[0] || v2Raw; // V2 returns { users: [...] } usually
+    const v2Result = await fetchWithTimeout(v2Url, headers, 10000);
+
+    // 检查是否为 JWT 过期错误
+    if (v2Result.status === 401 || v2Result.status === 403) {
+      return jsonResponse({
+        error: 'JWT Token 已过期或无效，请重新获取 Duolingo JWT Token',
+        code: 'JWT_EXPIRED'
+      }, 401);
+    }
+
+    const v2Raw = v2Result.data as { users?: any[] } | any;
+    const v2Data = v2Raw?.users?.[0] || v2Raw;
 
     let userData = v2Data;
     if (!userData) {
       const v1Url = `${DUOLINGO_BASE_URL}/users/${username}`;
-      const v1Data = await fetchWithTimeout(v1Url, headers, 4500);
-      userData = v1Data;
+      const v1Result = await fetchWithTimeout(v1Url, headers, 10000);
+
+      if (v1Result.status === 401 || v1Result.status === 403) {
+        return jsonResponse({
+          error: 'JWT Token 已过期或无效，请重新获取 Duolingo JWT Token',
+          code: 'JWT_EXPIRED'
+        }, 401);
+      }
+
+      userData = v1Result.data;
     }
 
     if (!userData) {
@@ -70,11 +91,12 @@ export const GET: APIRoute = async ({ request }) => {
 
     const userId = userData.id || userData.user_id || userData.tracking_properties?.user_id;
     if (userId) {
-      const xpData = await fetchWithTimeout(
+      const xpResult = await fetchWithTimeout(
         `${DUOLINGO_BASE_URL}/2017-06-30/users/${userId}/xp_summaries?startDate=1970-01-01`,
         headers,
-        5000
-      ) as { summaries?: unknown[] } | null;
+        12000
+      );
+      const xpData = xpResult.data as { summaries?: unknown[] } | null;
 
       if (xpData?.summaries) {
         userData._xpSummaries = xpData.summaries;
