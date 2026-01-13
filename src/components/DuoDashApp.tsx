@@ -2,6 +2,7 @@ import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import type { UserData } from '../types';
 import { LoginScreen } from './LoginScreen';
 import { Navbar, PageHeader, StatCard, CourseList, TodayOverview } from './dashboard';
+import { ShareModal } from './share';
 
 const LazyXpHistoryChart = lazy(() => import('./charts/XpHistoryChart'));
 const LazyTimeHistoryChart = lazy(() => import('./charts/TimeHistoryChart'));
@@ -96,6 +97,7 @@ export function DuoDashApp(): React.ReactElement {
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [shouldRenderHeatmap, setShouldRenderHeatmap] = useState(false);
   const [shouldRenderAboveFoldCharts, setShouldRenderAboveFoldCharts] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const heatmapSentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -298,7 +300,7 @@ export function DuoDashApp(): React.ReactElement {
     <div className="min-h-screen bg-[#f7f7f7]">
       <style>{ANIMATION_STYLES}</style>
 
-      <Navbar loading={loading} lastUpdated={lastUpdated} onRefresh={handleRefresh} />
+      <Navbar loading={loading} lastUpdated={lastUpdated} onRefresh={handleRefresh} onShare={() => setShowShareModal(true)} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PageHeader userData={userData} viewData={viewData} />
@@ -382,6 +384,14 @@ export function DuoDashApp(): React.ReactElement {
           )}
         </div>
       </main>
+
+      {userData && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          userData={userData}
+        />
+      )}
     </div>
   );
 }

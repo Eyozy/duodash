@@ -23,6 +23,8 @@ export interface UserData {
   dailyXpHistory: { date: string; xp: number }[];
   dailyTimeHistory?: { date: string; time: number }[];
   yearlyXpHistory?: { date: string; xp: number; time?: number }[];
+  weeklyXpHistory?: { date: string; xp: number; isFuture: boolean }[];
+  weeklyTimeHistory?: { date: string; time: number; isFuture: boolean }[];
   learningLanguage: string;
   creationDate: string;
   accountAgeDays: number;

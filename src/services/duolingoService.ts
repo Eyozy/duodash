@@ -8,12 +8,40 @@ const LEAGUE_TIERS = [
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const DEFAULT_TIMEZONE = 'Asia/Shanghai';
 
+// 日期格式化器单例，避免重复创建
+const DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  timeZone: DEFAULT_TIMEZONE
+});
+
+// 日期解析缓存，减少重复的 Date 解析开销
+const dateParseCache = new Map<string, number>();
+
+function getCachedDateTimestamp(dateStr: string): number {
+  let ts = dateParseCache.get(dateStr);
+  if (ts === undefined) {
+    ts = new Date(dateStr).getTime();
+    // 限制缓存大小，防止内存泄漏
+    if (dateParseCache.size > 1000) {
+      const firstKey = dateParseCache.keys().next().value;
+      if (firstKey) dateParseCache.delete(firstKey);
+    }
+    dateParseCache.set(dateStr, ts);
+  }
+  return ts;
+}
+
 /**
  * 将 Date 对象转换为 YYYY-MM-DD 格式的本地日期键
  * 为了保证一致性，默认使用 'Asia/Shanghai' 时区
  */
 function toLocalDateKey(date: Date, timeZone: string = DEFAULT_TIMEZONE): string {
   try {
+    if (timeZone === DEFAULT_TIMEZONE) {
+      return DATE_FORMATTER.format(date);
+    }
     const formatter = new Intl.DateTimeFormat('en-CA', {
       year: 'numeric',
       month: '2-digit',
@@ -21,7 +49,7 @@ function toLocalDateKey(date: Date, timeZone: string = DEFAULT_TIMEZONE): string
       timeZone
     });
     return formatter.format(date);
-  } catch (e) {
+  } catch {
     // 降级方案：如果时区无效，回退到原始逻辑（服务器本地时间）
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -67,6 +95,39 @@ function getStartOfDay(date: Date): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+/**
+ * 获取指定日期所在自然周的周一（一周的第一天）
+ * 使用 Asia/Shanghai 时区确保一致性
+ */
+function getMonday(date: Date, timeZone: string = DEFAULT_TIMEZONE): Date {
+  // 获取该时区下的日期信息
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+    timeZone
+  });
+
+  const parts = formatter.formatToParts(date);
+  const year = parseInt(parts.find(p => p.type === 'year')?.value || '2024');
+  const month = parseInt(parts.find(p => p.type === 'month')?.value || '1') - 1;
+  const day = parseInt(parts.find(p => p.type === 'day')?.value || '1');
+
+  // 创建本地日期对象
+  const localDate = new Date(year, month, day);
+  const dayOfWeek = localDate.getDay(); // 0 = 周日, 1 = 周一, ..., 6 = 周六
+
+  // 计算到周一的偏移量（周日需要回退6天，其他天回退 dayOfWeek - 1 天）
+  const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+
+  const monday = new Date(localDate);
+  monday.setDate(localDate.getDate() - daysToMonday);
+  monday.setHours(0, 0, 0, 0);
+
+  return monday;
 }
 
 function calcDaysSince(createdAt: Date): number {
@@ -153,9 +214,14 @@ function sumPoints(items: Array<{ points?: number; xp?: number }> | undefined): 
 }
 
 export function transformDuolingoData(rawData: DuolingoRawUser): UserData {
+  // 输入验证
+  if (!rawData || typeof rawData !== 'object') {
+    throw new TypeError('transformDuolingoData: 输入必须是有效的用户数据对象');
+  }
+
   const rawAny = rawData as any;
 
-  const streak = rawData.site_streak ?? rawData.streak;
+  const streak = rawData.site_streak ?? rawData.streak ?? 0;
   const gems = rawData.gemsTotalCount || rawData.totalGems || rawData.gems || rawData.tracking_properties?.gems || rawData.lingots || rawData.rupees || 0;
 
   let totalXp = rawData.total_xp ?? rawData.totalXp ?? 0;
@@ -266,6 +332,7 @@ export function transformDuolingoData(rawData: DuolingoRawUser): UserData {
     });
   }
 
+  // 滚动 7 天数据（用于首页图表）
   const dailyXpHistory: { date: string; xp: number }[] = [];
   const dailyTimeHistory: { date: string; time: number }[] = [];
   const today = new Date();
@@ -277,6 +344,31 @@ export function transformDuolingoData(rawData: DuolingoRawUser): UserData {
     const dayLabel = d.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
     dailyXpHistory.push({ date: dayLabel, xp: xpByDate.get(dateKey) || 0 });
     dailyTimeHistory.push({ date: dayLabel, time: timeByDate.get(dateKey) || 0 });
+  }
+
+  // 自然周数据（用于分享卡片，周一到周日）
+  const weeklyXpHistory: { date: string; xp: number; isFuture: boolean }[] = [];
+  const weeklyTimeHistory: { date: string; time: number; isFuture: boolean }[] = [];
+  const monday = getMonday(today);
+  const todayDateKey = toLocalDateKey(today);
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const dateKey = toLocalDateKey(d);
+    const dayLabel = d.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+    const isFuture = dateKey > todayDateKey;
+
+    weeklyXpHistory.push({
+      date: dayLabel,
+      xp: isFuture ? 0 : (xpByDate.get(dateKey) || 0),
+      isFuture
+    });
+    weeklyTimeHistory.push({
+      date: dayLabel,
+      time: isFuture ? 0 : (timeByDate.get(dateKey) || 0),
+      isFuture
+    });
   }
 
   const yearlyXpHistory: { date: string; xp: number; time?: number }[] = [];
@@ -363,6 +455,7 @@ export function transformDuolingoData(rawData: DuolingoRawUser): UserData {
     streak, totalXp, gems,
     league: leagueName, leagueTier: tierIndex, courses, dailyXpHistory,
     dailyTimeHistory, yearlyXpHistory,
+    weeklyXpHistory, weeklyTimeHistory,
     learningLanguage, creationDate: creationDateStr, accountAgeDays,
     isPlus, dailyGoal, estimatedLearningTime,
     xpToday,
