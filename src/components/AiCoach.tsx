@@ -118,7 +118,12 @@ export function AiCoach({ userData }: AiCoachProps): React.ReactElement {
                   setAnalysis(result);
                 })
                 .catch(() => {
-                  setAnalysis("刷新失败，请稍后重试。");
+                  // 刷新失败时保留之前的分析结果，只显示临时提示
+                  if (analysis) {
+                    console.warn('AI 刷新失败，保留现有分析');
+                  } else {
+                    setAnalysis("刷新失败，请稍后重试。");
+                  }
                 })
                 .finally(() => {
                   setLoading(false);
