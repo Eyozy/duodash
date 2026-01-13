@@ -25,14 +25,17 @@ const ACHIEVEMENTS: Achievement[] = [
   { id: 'xp500', icon: 'bolt', name: '小试牛刀', description: '单日获得 500 XP', threshold: 500, unit: 'XP', category: 'dailyXp', tier: 'bronze' },
   { id: 'xp1000', icon: 'bolt', name: '势如破竹', description: '单日获得 1000 XP', threshold: 1000, unit: 'XP', category: 'dailyXp', tier: 'silver' },
   { id: 'xp2000', icon: 'rocket', name: '一日千里', description: '单日获得 2000 XP', threshold: 2000, unit: 'XP', category: 'dailyXp', tier: 'gold' },
+  { id: 'xp3500', icon: 'rocket', name: '势不可挡', description: '单日获得 3500 XP', threshold: 3500, unit: 'XP', category: 'dailyXp', tier: 'platinum' },
   { id: 'xp5000', icon: 'crown', name: '登峰造极', description: '单日获得 5000 XP', threshold: 5000, unit: 'XP', category: 'dailyXp', tier: 'diamond' },
   { id: 'days50', icon: 'book', name: '学海泛舟', description: '累计学习 50 天', threshold: 50, unit: '天', category: 'totalDays', tier: 'bronze' },
   { id: 'days100', icon: 'book', name: '百日积累', description: '累计学习 100 天', threshold: 100, unit: '天', category: 'totalDays', tier: 'silver' },
   { id: 'days200', icon: 'duo', name: '学富五车', description: '累计学习 200 天', threshold: 200, unit: '天', category: 'totalDays', tier: 'gold' },
   { id: 'days365', icon: 'explorer', name: '一年之约', description: '累计学习 365 天', threshold: 365, unit: '天', category: 'totalDays', tier: 'platinum' },
+  { id: 'days730', icon: 'explorer', name: '两年征途', description: '累计学习 730 天', threshold: 730, unit: '天', category: 'totalDays', tier: 'diamond' },
   { id: 'totalXp10000', icon: 'medal', name: '万里长征', description: '累计获得 1 万 XP', threshold: 10000, unit: 'XP', category: 'totalXp', tier: 'bronze' },
   { id: 'totalXp50000', icon: 'medal', name: '五万大关', description: '累计获得 5 万 XP', threshold: 50000, unit: 'XP', category: 'totalXp', tier: 'silver' },
   { id: 'totalXp100000', icon: 'legend', name: '十万雄师', description: '累计获得 10 万 XP', threshold: 100000, unit: 'XP', category: 'totalXp', tier: 'gold' },
+  { id: 'totalXp250000', icon: 'legend', name: '语言精英', description: '累计获得 25 万 XP', threshold: 250000, unit: 'XP', category: 'totalXp', tier: 'platinum' },
   { id: 'totalXp500000', icon: 'diamond', name: '语言大师', description: '累计获得 50 万 XP', threshold: 500000, unit: 'XP', category: 'totalXp', tier: 'diamond' },
 ];
 
