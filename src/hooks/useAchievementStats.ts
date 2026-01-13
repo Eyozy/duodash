@@ -28,6 +28,23 @@ const MILESTONES = {
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const MAX_STREAK_CHECK = 3650;
 
+// 日期解析缓存，避免重复解析相同日期字符串
+const dateTimestampCache = new Map<string, number>();
+
+function getCachedTimestamp(dateStr: string): number {
+  let ts = dateTimestampCache.get(dateStr);
+  if (ts === undefined) {
+    ts = new Date(dateStr).getTime();
+    // 限制缓存大小
+    if (dateTimestampCache.size > 500) {
+      const firstKey = dateTimestampCache.keys().next().value;
+      if (firstKey) dateTimestampCache.delete(firstKey);
+    }
+    dateTimestampCache.set(dateStr, ts);
+  }
+  return ts;
+}
+
 function formatDateString(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -78,7 +95,7 @@ export function useAchievementStats(data: DailyXpData[]): AchievementStats {
 
     const sortedData = [...validData]
       .filter(d => d.xp > 0)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .sort((a, b) => getCachedTimestamp(a.date) - getCachedTimestamp(b.date));
 
     // 连续天数统计
     let maxStreak = 0;
@@ -86,9 +103,9 @@ export function useAchievementStats(data: DailyXpData[]): AchievementStats {
     const streakMilestones: Record<number, string> = {};
 
     for (let i = 1; i < sortedData.length; i++) {
-      const prevDate = new Date(sortedData[i - 1].date);
-      const currDate = new Date(sortedData[i].date);
-      const diffDays = Math.round((currDate.getTime() - prevDate.getTime()) / MS_PER_DAY);
+      const prevTs = getCachedTimestamp(sortedData[i - 1].date);
+      const currTs = getCachedTimestamp(sortedData[i].date);
+      const diffDays = Math.round((currTs - prevTs) / MS_PER_DAY);
 
       if (diffDays === 1) {
         tempStreak++;
