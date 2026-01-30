@@ -86,11 +86,11 @@ export function createAuthChecker(getSecretToken: () => string) {
         const requestUrl = new URL(requestOrigin);
         const currentUrl = new URL(request.url);
         
-        // 允许相同 hostname 或本地环回地址
-        const isSameHost = 
+        // 允许相同 hostname，本地环回地址仅在开发环境信任
+        const isLocalhost = requestUrl.hostname === 'localhost' || requestUrl.hostname === '127.0.0.1';
+        const isSameHost =
           requestUrl.hostname === currentUrl.hostname ||
-          requestUrl.hostname === 'localhost' ||
-          requestUrl.hostname === '127.0.0.1';
+          (isLocalhost && process.env.NODE_ENV === 'development');
 
         if (isSameHost) {
           return true;
