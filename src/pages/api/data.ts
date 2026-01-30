@@ -45,7 +45,7 @@ export const GET: APIRoute = async ({ request }) => {
   const cacheKey = `user:${username}`;
   const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return jsonResponse({ data: cached.data, cached: true }, 200, 'private, max-age=60');
+    return jsonResponse({ data: cached.data, cached: true }, 200, { cacheControl: 'private, max-age=60' });
   }
 
   try {
@@ -115,9 +115,15 @@ export const GET: APIRoute = async ({ request }) => {
     }
     cache.set(cacheKey, { data: transformed, timestamp: Date.now() });
 
-    return jsonResponse({ data: transformed }, 200, 'private, max-age=60');
+    return jsonResponse({ data: transformed }, 200, { cacheControl: 'private, max-age=60' });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    // 错误消息脱敏：移除可能包含的敏感信息
+    let message = error instanceof Error ? error.message : 'Unknown error';
+    message = message.replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
+    message = message.replace(/https?:\/\/[^\s]+/g, '[API_ENDPOINT]');
+    if (message.length > 100) {
+      message = message.substring(0, 100) + '...';
+    }
     return jsonResponse({ error: message }, 500);
   }
 };

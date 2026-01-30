@@ -50,7 +50,7 @@ export enum LoadingState {
   ERROR = 'ERROR',
 }
 
-export type AiProvider = 'gemini' | 'openrouter' | 'deepseek' | 'siliconflow' | 'moonshot' | 'custom';
+export type AiProvider = 'gemini' | 'openrouter' | 'deepseek' | 'siliconflow' | 'moonshot' | 'zenmux' | 'custom';
 
 export interface AiConfig {
   provider: AiProvider;

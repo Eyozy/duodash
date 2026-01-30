@@ -82,12 +82,16 @@ function getStartOfDayInTimezone(date: Date, timeZone: string = DEFAULT_TIMEZONE
 /**
  * 将 xpSummary 的日期字段解析为日期键
  * 统一处理数字时间戳和字符串日期格式
+ * 返回 null 表示无效日期
  */
-function parseSummaryDateKey(date: number | string): string {
+function parseSummaryDateKey(date: number | string): string | null {
   if (typeof date === 'number') {
-    return toLocalDateKey(new Date(date * 1000));
+    const d = new Date(date * 1000);
+    if (isNaN(d.getTime())) return null;
+    return toLocalDateKey(d);
   }
   const utcDate = new Date(String(date).replace(/\//g, '-') + 'T00:00:00Z');
+  if (isNaN(utcDate.getTime())) return null;
   return toLocalDateKey(utcDate);
 }
 

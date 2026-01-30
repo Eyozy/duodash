@@ -1,10 +1,9 @@
 import type { APIRoute } from 'astro';
+import type { AiProvider } from '../../types';
 import { GoogleGenAI } from '@google/genai';
 import { getEnv, jsonResponse, createAuthChecker } from '../../utils/api-helpers';
 
 export const prerender = false;
-
-type AiProvider = 'gemini' | 'openrouter' | 'deepseek' | 'siliconflow' | 'moonshot' | 'zenmux' | 'custom';
 
 interface AiConfig {
   provider: AiProvider;
