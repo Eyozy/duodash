@@ -12,7 +12,6 @@
     "@astrojs/node": "^9.5.1",
     "@astrojs/react": "^4.4.2",
     "@astrojs/tailwind": "^6.0.2",
-    "@google/genai": "^1.33.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@zumer/snapdom": "^2.0.1",

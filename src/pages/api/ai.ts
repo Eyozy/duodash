@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import type { AiProvider } from '../../types';
-import { GoogleGenAI } from '@google/genai';
 import { getEnv, jsonResponse, createAuthChecker } from '../../utils/api-helpers';
 
 export const prerender = false;
@@ -13,7 +12,6 @@ interface AiConfig {
 }
 
 const API_KEY_ENV_MAP: Record<AiProvider, string> = {
-  gemini: 'GEMINI_API_KEY',
   openrouter: 'OPENROUTER_API_KEY',
   deepseek: 'DEEPSEEK_API_KEY',
   siliconflow: 'SILICONFLOW_API_KEY',
@@ -23,7 +21,6 @@ const API_KEY_ENV_MAP: Record<AiProvider, string> = {
 };
 
 const DEFAULT_ENDPOINTS: Record<AiProvider, string> = {
-  gemini: '',
   openrouter: 'https://openrouter.ai/api/v1',
   deepseek: 'https://api.deepseek.com',
   siliconflow: 'https://api.siliconflow.cn/v1',
@@ -35,11 +32,11 @@ const DEFAULT_ENDPOINTS: Record<AiProvider, string> = {
 const checkToken = createAuthChecker(() => getEnv('API_SECRET_TOKEN'));
 
 function getEnvConfig(): AiConfig {
-  const provider = (getEnv('AI_PROVIDER') || 'gemini') as AiProvider;
+  const provider = (getEnv('AI_PROVIDER') || 'deepseek') as AiProvider;
   return {
     provider,
     apiKey: getEnv(API_KEY_ENV_MAP[provider]),
-    model: getEnv('AI_MODEL') || 'gemini-2.5-flash',
+    model: getEnv('AI_MODEL') || 'deepseek-chat',
     baseUrl: getEnv('AI_BASE_URL'),
   };
 }
@@ -124,54 +121,41 @@ export const POST: APIRoute = async ({ request }) => {
 
     let analysis: string;
 
-    if (config.provider === 'gemini') {
-      const options: { apiKey: string; baseUrl?: string } = { apiKey: config.apiKey };
-      if (config.baseUrl.trim()) {
-        options.baseUrl = config.baseUrl;
-      }
-      const ai = new GoogleGenAI(options);
-      const response = await ai.models.generateContent({
-        model: config.model,
-        contents: `${systemPrompt}\n\n${userPrompt}`,
-      });
-      analysis = response.text || '咕咕！我没看清你的数据，但快去学习，不然...';
-    } else {
-      const baseEndpoint = config.baseUrl || DEFAULT_ENDPOINTS[config.provider];
-      if (!baseEndpoint) {
-        throw new Error('未配置 API 端点');
-      }
-      const endpoint = baseEndpoint.replace(/\/$/, '') + '/chat/completions';
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
-      };
-      if (config.provider === 'openrouter') {
-        headers['HTTP-Referer'] = request.headers.get('origin') || '';
-        headers['X-Title'] = 'DuoDash';
-      }
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          model: config.model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.7,
-        }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`API Error ${response.status}: ${errText}`);
-      }
-
-      const data = await response.json();
-      analysis = data.choices?.[0]?.message?.content || 'AI 返回了空内容。';
+    const baseEndpoint = config.baseUrl || DEFAULT_ENDPOINTS[config.provider];
+    if (!baseEndpoint) {
+      throw new Error('未配置 API 端点');
     }
+    const endpoint = baseEndpoint.replace(/\/$/, '') + '/chat/completions';
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${config.apiKey}`,
+    };
+    if (config.provider === 'openrouter') {
+      headers['HTTP-Referer'] = request.headers.get('origin') || '';
+      headers['X-Title'] = 'DuoDash';
+    }
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: config.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`API Error ${response.status}: ${errText}`);
+    }
+
+    const data = await response.json();
+    analysis = data.choices?.[0]?.message?.content || 'AI 返回了空内容。';
 
     return buildResponse(analysis, config);
   } catch (error: unknown) {
