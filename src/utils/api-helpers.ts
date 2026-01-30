@@ -19,7 +19,9 @@ export function jsonResponse(
   options?: { cacheControl?: string }
 ): Response {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json; charset=utf-8'
+    'Content-Type': 'application/json; charset=utf-8',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY'
   };
   if (options?.cacheControl) {
     headers['Cache-Control'] = options.cacheControl;

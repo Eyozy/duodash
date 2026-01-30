@@ -118,9 +118,9 @@ function getMonday(date: Date, timeZone: string = DEFAULT_TIMEZONE): Date {
 
   // 创建本地日期对象
   const localDate = new Date(year, month, day);
-  const dayOfWeek = localDate.getDay(); // 0 = 周日, 1 = 周一, ..., 6 = 周六
+  const dayOfWeek = localDate.getDay(); // 0 = 周日，1 = 周一，..., 6 = 周六
 
-  // 计算到周一的偏移量（周日需要回退6天，其他天回退 dayOfWeek - 1 天）
+  // 计算到周一的偏移量（周日需要回退 6 天，其他天回退 dayOfWeek - 1 天）
   const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
 
   const monday = new Date(localDate);
@@ -468,41 +468,21 @@ export function transformDuolingoData(rawData: DuolingoRawUser): UserData {
   };
 };
 
-async function fetchFromProxy(target: string, params: Record<string, string>, jwt: string): Promise<any> {
-  const url = new URL('/api/duo', window.location.origin);
-  url.searchParams.set('target', target);
-  for (const [k, v] of Object.entries(params)) {
-    url.searchParams.set(k, v);
+/**
+ * 客户端使用此函数从本服务 API 获取数据
+ * 替代了之前直接访问 Duolingo 的逻辑，解决了 CORS 和 安全问题
+ */
+export async function fetchDuolingoData(_username: string, _jwt: string): Promise<UserData> {
+  const response = await fetch('/api/data');
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.error || 'Fetch failed');
   }
 
-  const response = await fetch(url.toString(), jwt ? { headers: { 'x-duo-jwt': jwt } } : {});
-  if (!response.ok) return null;
-  return response.json();
-}
-
-async function fetchXpSummaries(userId: number, jwt: string): Promise<any[]> {
-  try {
-    const data = await fetchFromProxy('xp_summaries', { userId: userId.toString() }, jwt);
-    return data?.summaries || [];
-  } catch {
-    return [];
-  }
-}
-
-
-export async function fetchDuolingoData(username: string, jwt: string): Promise<UserData> {
-  const data = await fetchFromProxy('users', { username }, jwt);
-  if (!data) {
-    throw new Error("连接失败。请确保本地服务运行正常，或使用「粘贴 JSON」模式。");
+  if (result.code === 'JWT_EXPIRED') {
+     throw new Error('JWT_EXPIRED');
   }
 
-  const rawData = data.users ? data.users[0] : data;
-  const userId = rawData.id || rawData.user_id || rawData.tracking_properties?.user_id;
-
-  if (userId && jwt) {
-    const xpSummaries = await fetchXpSummaries(userId, jwt);
-    if (xpSummaries.length > 0) rawData._xpSummaries = xpSummaries;
-  }
-
-  return transformDuolingoData(rawData);
+  return result.data as UserData;
 }
