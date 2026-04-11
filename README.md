@@ -41,7 +41,7 @@ duodash/
 │   │       └── ai.ts                # AI 点评
 │   ├── services/
 │   │   ├── duolingoService.ts       # Duolingo 数据转换
-│   │   └── geminiService.ts         # AI 服务封装
+│   │   └── aiService.ts             # AI 服务封装
 │   └── types.ts                     # 类型定义
 ├── astro.config.mjs
 ├── tailwind.config.mjs
