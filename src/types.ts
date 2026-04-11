@@ -5,12 +5,7 @@ export interface Course {
   learningLanguage: string;
   crowns: number;
   id: string;
-}
-
-export interface DailyStats {
-  date: string;
-  xp: number;
-  time: number; // 学习时间（分钟）
+  current_learning?: boolean;
 }
 
 export interface UserData {
@@ -43,21 +38,7 @@ export interface UserData {
   weeklyXp?: number;
 }
 
-export enum LoadingState {
-  IDLE = 'IDLE',
-  LOADING = 'LOADING',
-  SUCCESS = 'SUCCESS',
-  ERROR = 'ERROR',
-}
-
 export type AiProvider = 'openrouter' | 'deepseek' | 'siliconflow' | 'moonshot' | 'zenmux' | 'custom';
-
-export interface AiConfig {
-  provider: AiProvider;
-  apiKey: string;
-  model: string;
-  baseUrl?: string;
-}
 
 export interface DuolingoCalendarEvent {
   datetime: number;
@@ -77,6 +58,14 @@ export interface DuolingoLanguageDataDetail {
   learning_language?: string;
   from_language?: string;
   current_learning?: boolean;
+  tier?: number;
+  skills?: Array<{
+    levels_finished?: number;
+    crowns?: number;
+    finishedLevels?: number;
+  }>;
+  calendar?: DuolingoCalendarEvent[];
+  level_progress?: number;
 }
 
 // V1 API language entry
@@ -183,35 +172,8 @@ export interface DuolingoRawUser {
   _leaderboardHistory?: unknown;
 }
 
-// XP Summary from API
-export interface XpSummary {
-  date: string;
-  numSessions: number;
-  gainedXp: number;
-  frozen: boolean;
-  streakExtended: boolean;
-  totalSessionTime: number;
-}
-
-/** 标准化的 XP 获取事件，与 DuolingoXpGain 结构相同 */
-export type XpGain = DuolingoXpGain;
-
 // Cache entry for API responses
 export interface CacheEntry<T> {
   data: T;
   timestamp: number;
-}
-
-// Tooltip props for charts
-export interface TooltipPayload {
-  payload: {
-    title: string;
-    xp: number;
-    [key: string]: unknown;
-  };
-}
-
-export interface ChartTooltipProps {
-  active?: boolean;
-  payload?: TooltipPayload[];
 }

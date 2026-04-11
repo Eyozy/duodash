@@ -31,8 +31,14 @@ const DEFAULT_ENDPOINTS: Record<AiProvider, string> = {
 
 const checkToken = createAuthChecker(() => getEnv('API_SECRET_TOKEN'));
 
+function isAiProvider(provider: string): provider is AiProvider {
+  return provider in API_KEY_ENV_MAP;
+}
+
 function getEnvConfig(): AiConfig {
-  const provider = (getEnv('AI_PROVIDER') || 'deepseek') as AiProvider;
+  const configuredProvider = getEnv('AI_PROVIDER') || 'deepseek';
+  const provider = isAiProvider(configuredProvider) ? configuredProvider : 'deepseek';
+
   return {
     provider,
     apiKey: getEnv(API_KEY_ENV_MAP[provider]),

@@ -30,4 +30,4 @@ export function jsonResponse(
 }
 
 // 重新导出 auth-helpers 的函数
-export { createAuthChecker, timingSafeEqual } from './auth-helpers';
+export { createAuthChecker } from './auth-helpers';
