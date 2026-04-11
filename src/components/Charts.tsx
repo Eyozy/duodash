@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { DuoColors } from '../styles/duolingoColors';
+import { HeatmapIcon } from './icons';
 
 interface HeatmapChartProps {
   data: { date: string; xp: number; time?: number }[];
@@ -19,7 +20,7 @@ interface SelectedDayInfo {
   alignment: TooltipAlignment;
 }
 
-const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+const MONTHS = ['1 月', '2 月', '3 月', '4 月', '5 月', '6 月', '7 月', '8 月', '9 月', '10 月', '11 月', '12 月'];
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 
 function toLocalDateStr(d: Date): string {
@@ -43,7 +44,6 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
   const [selectedHalf, setSelectedHalf] = useState<number>(now.getMonth() < 6 ? 1 : 2);
   const [selectedDay, setSelectedDay] = useState<SelectedDayInfo | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('year');
-  const [isHoveringTooltip, setIsHoveringTooltip] = useState(false);
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -51,8 +51,6 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
     function checkScreenSize(): void {
       const width = window.innerWidth;
       if (width < 640) {
-        setViewMode('quarter');
-      } else if (width < 1024) {
         setViewMode('half');
       } else {
         setViewMode('year');
@@ -73,10 +71,15 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
   }, []);
 
   useEffect(() => {
-    if (!selectedDay || isHoveringTooltip) return;
-    const timer = setTimeout(() => setSelectedDay(null), 2500);
-    return () => clearTimeout(timer);
-  }, [selectedDay, isHoveringTooltip]);
+    if (!selectedDay) return;
+
+    function handleScroll(): void {
+      setSelectedDay(null);
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [selectedDay]);
 
   const { xpMap, timeMap, sortedYears } = useMemo(() => {
     const xpM = new Map<string, number>();
@@ -122,7 +125,16 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
       current.setDate(current.getDate() + 1);
     }
 
-    const max = Math.max(...dates.map(d => d.xp), 50);
+    const yearStart = new Date(selectedYear, 0, 1);
+    const yearEnd = new Date(selectedYear, 11, 31);
+    const yearDates: number[] = [];
+    const yearCurrent = new Date(yearStart);
+    while (yearCurrent <= yearEnd) {
+      const xp = xpMap.get(toLocalDateStr(yearCurrent)) || 0;
+      if (xp > 0) yearDates.push(xp);
+      yearCurrent.setDate(yearCurrent.getDate() + 1);
+    }
+    const max = Math.max(...yearDates, 50);
 
     const weeksArr: typeof dates[] = [];
     let currentWeek: typeof dates = [];
@@ -166,10 +178,10 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
   const viewXp = allDates.reduce((sum, d) => sum + (d.xp > 0 ? d.xp : 0), 0);
   const activeDays = allDates.filter(d => d.xp > 0).length;
 
-  function handleDayClick(day: typeof allDates[0], e: React.MouseEvent<HTMLDivElement>): void {
+  function showDayTooltip(day: typeof allDates[0], target: HTMLElement): void {
     if (day.xp < 0 || !day.dateStr) return;
 
-    const rect = e.currentTarget.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
     const showBelow = rect.top < 100;
     const x = rect.left + rect.width / 2;
     const y = showBelow ? rect.bottom : rect.top;
@@ -191,15 +203,18 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
 
   return (
     <div className="w-full">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex flex-col gap-2 mb-4">
+        {/* 年份选择 */}
+        <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="选择年份">
           {sortedYears.map(year => (
             <button
               key={year}
               onClick={() => setSelectedYear(year)}
-              className={`px-3 py-1 rounded-lg text-sm font-bold transition-all ${year === selectedYear
-                ? 'bg-[#58cc02] text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              aria-label={`选择 ${year} 年`}
+              aria-pressed={year === selectedYear}
+              className={`px-2.5 py-1 sm:px-3 rounded-button text-xs sm:text-sm font-bold transition-all ${year === selectedYear
+                ? 'bg-brand-100 text-brand-700 border border-brand-500'
+                : 'bg-neutral-100 text-neutral-800 hover:bg-brand-50'
                 }`}
             >
               {year}
@@ -209,14 +224,16 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
 
         {/* 季度选择 - 小屏幕 */}
         {viewMode === 'quarter' && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1" role="group" aria-label="选择季度">
             {[1, 2, 3, 4].map(q => (
               <button
                 key={q}
                 onClick={() => setSelectedQuarter(q)}
-                className={`px-3 py-1 rounded-lg text-sm font-bold transition-all ${q === selectedQuarter
-                  ? 'bg-[#1cb0f6] text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                aria-label={`选择第 ${q} 季度`}
+                aria-pressed={q === selectedQuarter}
+                className={`px-2.5 py-1 sm:px-3 rounded-button text-xs sm:text-sm font-bold transition-all ${q === selectedQuarter
+                  ? 'bg-status-info-bg text-status-info border border-status-info'
+                  : 'bg-neutral-100 text-neutral-800 hover:bg-brand-50'
                   }`}
               >
                 Q{q}
@@ -227,14 +244,16 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
 
         {/* 半年选择 - 中等屏幕 */}
         {viewMode === 'half' && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1" role="group" aria-label="选择半年">
             {[1, 2].map(h => (
               <button
                 key={h}
                 onClick={() => setSelectedHalf(h)}
-                className={`px-3 py-1 rounded-lg text-sm font-bold transition-all ${h === selectedHalf
-                  ? 'bg-[#1cb0f6] text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                aria-label={`选择${h === 1 ? '上' : '下'}半年`}
+                aria-pressed={h === selectedHalf}
+                className={`px-2.5 py-1 sm:px-3 rounded-button text-xs sm:text-sm font-bold transition-all ${h === selectedHalf
+                  ? 'bg-status-info-bg text-status-info border border-status-info'
+                  : 'bg-neutral-100 text-neutral-800 hover:bg-brand-50'
                   }`}
               >
                 {h === 1 ? '上半年' : '下半年'}
@@ -247,7 +266,7 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
       <div className="w-full pb-2">
         <div className="relative w-full">
           {/* 月份标签 */}
-          <div className="flex ml-4 mb-1 text-xs text-gray-600 h-4 relative w-full">
+          <div className="flex ml-4 mb-1 text-[10px] sm:text-xs text-neutral-500 h-4 relative w-full">
             {monthLabels.map((label, idx) => (
               <div
                 key={idx}
@@ -261,15 +280,18 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
 
           {/* 使用 grid 统一布局 */}
           <div
-            className="grid gap-[1px] lg:gap-[2px] relative w-full p-[3px]"
+            className="grid relative w-full p-[3px]"
             style={{
               gridTemplateColumns: `16px repeat(${weeks.length}, minmax(0, 1fr))`,
+              gridTemplateRows: 'repeat(7, minmax(0, 1fr))',
+              gap: '2px',
+              aspectRatio: `${weeks.length + 1} / 7`,
             }}
           >
             {WEEKDAYS.map((label, idx) => (
               <div
                 key={`label-${idx}`}
-                className="text-[10px] text-gray-500 flex items-center justify-center"
+                className="text-[9px] sm:text-[10px] text-neutral-500 flex items-center justify-center"
                 style={{ gridColumn: 1, gridRow: idx + 1 }}
               >
                 {idx % 2 === 1 ? label : ''}
@@ -282,14 +304,22 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
                 return (
                   <div
                     key={`${weekIdx}-${dayIdx}`}
-                    className={`w-full rounded-sm transition-all ${isValidDay ? 'cursor-pointer hover:ring-2 hover:ring-[#58cc02]' : ''}`}
+                    role={isValidDay ? 'button' : undefined}
+                    tabIndex={isValidDay ? 0 : undefined}
+                    aria-label={isValidDay ? `${day.dateStr}: ${day.xp} XP` : undefined}
+                    className={`w-full h-full rounded-sm transition-all ${isValidDay ? 'cursor-pointer hover:ring-2 hover:ring-[#58cc02]' : ''}`}
                     style={{
                       backgroundColor: getColor(day.xp, maxXp),
                       gridColumn: weekIdx + 2,
                       gridRow: dayIdx + 1,
-                      paddingBottom: '100%',
                     }}
-                    onClick={(e) => handleDayClick(day, e)}
+                    onClick={(e) => showDayTooltip(day, e.currentTarget)}
+                    onKeyDown={(e) => {
+                      if (isValidDay && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        showDayTooltip(day, e.currentTarget);
+                      }
+                    }}
                   />
                 );
               })
@@ -302,25 +332,23 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
                   onClick={() => setSelectedDay(null)}
                 />
                 <div
-                  className="fixed z-[9999] bg-gray-800 text-white px-3 py-2 rounded-lg shadow-lg text-sm whitespace-nowrap"
+                  className="fixed z-[9999] bg-surface text-neutral-800 px-3 py-2 rounded-card shadow-tooltip border border-neutral-100 text-sm whitespace-nowrap"
                   style={{
                     left: `${selectedDay.x}px`,
                     top: selectedDay.showBelow ? `${selectedDay.y + 10}px` : `${selectedDay.y - 10}px`,
                     transform: getTooltipTransform()
                   }}
-                  onMouseEnter={() => setIsHoveringTooltip(true)}
-                  onMouseLeave={() => setIsHoveringTooltip(false)}
                 >
                   <div className="font-bold">{selectedDay.date}</div>
-                  <div className="text-[#58cc02]">{selectedDay.xp} XP</div>
+                  <div className="text-brand-500">{selectedDay.xp} XP</div>
                   {selectedDay.time !== undefined && selectedDay.time > 0 && (
-                    <div className="text-gray-300 text-xs">{selectedDay.time} 分钟</div>
+                    <div className="text-neutral-500 text-xs">{selectedDay.time} 分钟</div>
                   )}
                   <div
                     className={`absolute w-0 h-0 border-l-[6px] border-r-[6px] border-transparent ${
                       selectedDay.showBelow
-                        ? 'top-[-6px] border-b-[6px] border-b-gray-800'
-                        : 'bottom-[-6px] border-t-[6px] border-t-gray-800'
+                        ? 'top-[-6px] border-b-[6px] border-b-white'
+                        : 'bottom-[-6px] border-t-[6px] border-t-white'
                     }`}
                     style={{
                       left: selectedDay.alignment === 'left' ? '15%' : selectedDay.alignment === 'right' ? '85%' : '50%',
@@ -335,7 +363,8 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
 
           {/* 图例 */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-3 gap-1 sm:gap-0">
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-neutral-500">
+              <HeatmapIcon className="inline-block w-3.5 h-3.5 mr-1 -mt-0.5 text-brand-500" />
               {selectedYear}
               {viewMode === 'quarter' && ` Q${selectedQuarter}`}
               {viewMode === 'half' && ` ${selectedHalf === 1 ? '上半年' : '下半年'}`}
@@ -343,7 +372,7 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
               学习 <span style={{ color: DuoColors.featherGreen }} className="font-bold">{activeDays}</span> 天，
               获得 <span style={{ color: DuoColors.beeYellow }} className="font-bold">{viewXp.toLocaleString()}</span> XP
             </div>
-            <div className="flex items-center gap-1 text-xs text-gray-500">
+            <div className="flex items-center gap-1 text-xs text-neutral-500">
               <span>少</span>
               {['#EBEDF0', '#9BE9A8', '#40C463', DuoColors.featherGreen, '#216E39'].map((color, i) => (
                 <div key={i} className="w-[10px] h-[10px] rounded-sm" style={{ backgroundColor: color }} />

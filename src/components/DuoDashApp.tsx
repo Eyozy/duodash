@@ -1,80 +1,33 @@
-import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import type { UserData } from '../types';
 import { LoginScreen } from './LoginScreen';
 import { Navbar, PageHeader, StatCard, CourseList, TodayOverview } from './dashboard';
+import { LoadingScreen, ErrorScreen } from './dashboard';
 import { ShareModal } from './share';
+import { AccountAgeIcon, CourseIcon, HeatmapIcon, TimeIcon, TotalXpIcon, TrendIcon } from './icons';
+import { useDashboardData } from '../hooks/useDashboardData';
+import { buildDemoData } from '../utils/demo-data';
+import { MESSAGES } from '../constants/messages';
 
 const LazyXpHistoryChart = lazy(() => import('./charts/XpHistoryChart'));
 const LazyTimeHistoryChart = lazy(() => import('./charts/TimeHistoryChart'));
 const LazyHeatmapChart = lazy(() => import('./Charts').then(m => ({ default: m.HeatmapChart })));
-const LazyAchievementsSection = lazy(() => import('./achievements/AchievementsSection'));
+const LazyAchievementsSection = lazy(() => import('./achievements/AchievementsSection').then((m) => ({ default: m.AchievementsSection })));
 const LazyAiCoach = lazy(() => import('./AiCoach').then(m => ({ default: m.AiCoach })));
 
 function ChartSkeleton(): React.ReactElement {
   return (
-    <div className="h-40 w-full bg-gray-100 rounded-xl animate-pulse flex items-center justify-center" style={{ minHeight: '160px' }}>
-      <span className="text-gray-600 text-sm">加载中...</span>
+    <div className="panel-card-muted flex h-40 w-full items-center justify-center animate-pulse">
+      <span className="text-neutral-500 text-sm">{MESSAGES.LOADING.PLACEHOLDER}</span>
     </div>
   );
 }
-
-const ANIMATION_STYLES = `
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-seq { animation: fadeInUp 0.2s ease-out forwards; opacity: 0; }
-.seq-1 { animation-delay: 0s; }
-.seq-2 { animation-delay: 0.1s; }
-.seq-3 { animation-delay: 0.15s; }
-.seq-4 { animation-delay: 0.2s; }
-.seq-5 { animation-delay: 0.25s; }
-.seq-6 { animation-delay: 0.3s; }
-.seq-7 { animation-delay: 0.35s; }
-.seq-8 { animation-delay: 0.4s; }
-.seq-9 { animation-delay: 0.45s; }
-.seq-10 { animation-delay: 0.5s; }
-.seq-11 { animation-delay: 0.55s; }
-.seq-12 { animation-delay: 0.6s; }
-`;
-
-const DEMO_DATA: UserData = {
-  streak: 2045,
-  totalXp: 202663,
-  gems: 15400,
-  league: "钻石 (Diamond)",
-  leagueTier: 9,
-  learningLanguage: "Spanish",
-  creationDate: "2015 年 5 月 12 日",
-  accountAgeDays: 3200,
-  isPlus: true,
-  dailyGoal: 50,
-  estimatedLearningTime: "562 小时 57 分钟",
-  courses: [
-    { id: 'es', title: "Spanish", xp: 125000, fromLanguage: "en", learningLanguage: "es", crowns: 150 },
-    { id: 'fr', title: "French", xp: 55000, fromLanguage: "en", learningLanguage: "fr", crowns: 45 },
-    { id: 'de', title: "German", xp: 12000, fromLanguage: "en", learningLanguage: "de", crowns: 20 },
-    { id: 'jp', title: "Japanese", xp: 2500, fromLanguage: "en", learningLanguage: "ja", crowns: 5 },
-  ],
-  dailyXpHistory: [
-    { date: '11/29', xp: 120 }, { date: '11/30', xp: 250 }, { date: '12/1', xp: 45 },
-    { date: '12/2', xp: 320 }, { date: '12/3', xp: 150 }, { date: '12/4', xp: 550 }, { date: '12/5', xp: 400 },
-  ],
-  dailyTimeHistory: [
-    { date: '11/29', time: 40 }, { date: '11/30', time: 83 }, { date: '12/1', time: 15 },
-    { date: '12/2', time: 107 }, { date: '12/3', time: 50 }, { date: '12/4', time: 183 }, { date: '12/5', time: 133 },
-  ],
-  xpToday: 180,
-  lessonsToday: 5,
-  streakExtendedToday: true,
-  streakExtendedTime: "09:32"
-};
 
 const PLACEHOLDER_DATA: UserData = {
   streak: 0,
   totalXp: 0,
   gems: 0,
-  league: '加载中…',
+  league: MESSAGES.PLACEHOLDER.LOADING,
   leagueTier: -1,
   learningLanguage: '—',
   creationDate: '—',
@@ -88,202 +41,75 @@ const PLACEHOLDER_DATA: UserData = {
   yearlyXpHistory: [],
 };
 
-export function DuoDashApp(): React.ReactElement {
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isConfigured, setIsConfigured] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
-  const [shouldRenderHeatmap, setShouldRenderHeatmap] = useState(false);
-  const [shouldRenderAboveFoldCharts, setShouldRenderAboveFoldCharts] = useState(false);
+const STAT_CARDS = [
+  {
+    icon: <TimeIcon className="w-5 h-5 text-status-info" />,
+    iconBgClass: 'bg-status-info-bg',
+    label: '预估投入时间',
+    colorClass: 'text-status-info',
+    value: (data: UserData) => data.estimatedLearningTime,
+  },
+  {
+    icon: <TotalXpIcon className="w-6 h-6 text-yellow-500" />,
+    iconBgClass: 'bg-yellow-50',
+    label: '总经验',
+    colorClass: 'text-yellow-500',
+    value: (data: UserData) => data.totalXp.toLocaleString(),
+  },
+  {
+    icon: <CourseIcon className="w-5 h-5 text-brand-500" />,
+    iconBgClass: 'bg-brand-50',
+    label: '学习课程',
+    colorClass: 'text-brand-500',
+    value: (data: UserData) => data.courses.length,
+  },
+  {
+    icon: <AccountAgeIcon className="w-5 h-5 text-purple-500" />,
+    iconBgClass: 'bg-purple-50',
+    label: '账号年龄',
+    colorClass: 'text-purple-500',
+    value: (data: UserData) => `${data.accountAgeDays} 天`,
+  },
+] as const;
+
+function DuoDashApp(): React.ReactElement {
+  const { userData, loading, error, showLogin, lastUpdated, refresh, setUserData } = useDashboardData();
   const [showShareModal, setShowShareModal] = useState(false);
-  const heatmapSentinelRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    async function loadData(): Promise<void> {
-      try {
-        let hasLocalCache = false;
-        try {
-          const cached = localStorage.getItem('duodash:userData');
-          const cachedTs = localStorage.getItem('duodash:userDataTs');
-          if (cached) {
-            setUserData(JSON.parse(cached) as UserData);
-            setIsConfigured(true);
-            setShowLogin(false);
-            hasLocalCache = true;
-            if (cachedTs) setLastUpdated(Number(cachedTs) || null);
-          }
-        } catch {
-          // ignore cache errors
-        }
-
-        await new Promise<void>(resolve => setTimeout(resolve, 0));
-
-        const dataRes = await fetch('/api/data');
-        const result = await dataRes.json();
-
-        if (dataRes.status === 400 && result.error === 'Not configured') {
-          if (!hasLocalCache) setShowLogin(true);
-          setLoading(false);
-          return;
-        }
-
-        if (result.data) {
-          const next = result.data as UserData;
-          setUserData(next);
-          setIsConfigured(true);
-          setShowLogin(false);
-          try {
-            localStorage.setItem('duodash:userData', JSON.stringify(next));
-            localStorage.setItem('duodash:userDataTs', String(Date.now()));
-            setLastUpdated(Date.now());
-          } catch {
-            // ignore persistence errors
-          }
-        } else if (result.error !== 'Not configured') {
-          setError(result.error || '加载数据失败');
-          setIsConfigured(true);
-        }
-      } catch {
-        setError('连接服务器失败');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    if (!userData?.yearlyXpHistory?.length || shouldRenderHeatmap) return;
-
-    const el = heatmapSentinelRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some(e => e.isIntersecting)) {
-          setShouldRenderHeatmap(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: '200px' }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [userData?.yearlyXpHistory?.length, shouldRenderHeatmap]);
-
-  useEffect(() => {
-    setShouldRenderAboveFoldCharts(!!userData);
-  }, [userData]);
-
-  async function handleConnect(username: string, jwt: string): Promise<void> {
-    setLoading(true);
-    setError(null);
-    try {
-      const { fetchDuolingoData } = await import('../services/duolingoService');
-      const data = await fetchDuolingoData(username, jwt);
-      setUserData(data);
-      setShowLogin(false);
-    } catch {
-      setError("连接失败：请尝试使用「粘贴 JSON」模式，或检查环境变量配置。");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function handleJsonInput(jsonStr: string): void {
-    setLoading(true);
-    setError(null);
     import('../services/duolingoService')
       .then(({ transformDuolingoData }) => {
         try {
           const raw = JSON.parse(jsonStr);
           const userObj = raw.users ? raw.users[0] : raw;
           setUserData(transformDuolingoData(userObj));
-          setShowLogin(false);
         } catch {
-          setError("JSON 格式无效。请确保你复制了完整的页面内容。");
         }
       })
       .catch(() => {
-        setError("加载数据处理模块失败，请刷新页面重试。");
-      })
-      .finally(() => {
-        setLoading(false);
       });
   }
 
   function handleDemo(): void {
-    setUserData(DEMO_DATA);
-    setShowLogin(false);
+    setUserData(buildDemoData());
   }
 
-  async function handleRefresh(): Promise<void> {
-    setLoading(true);
-    setError(null);
-    try {
-      const dataRes = await fetch('/api/data');
-      const result = await dataRes.json();
+  const viewData = userData ?? PLACEHOLDER_DATA;
+  const hasUserData = userData !== null;
+  const hasTimeHistory = viewData.dailyTimeHistory?.some((day) => day.time > 0) ?? false;
+  const hasYearlyHistory = Boolean(userData?.yearlyXpHistory?.length);
 
-      if (result.data) {
-        const next = result.data as UserData;
-        setUserData(next);
-        setShowLogin(false);
-        try {
-          localStorage.setItem('duodash:userData', JSON.stringify(next));
-          localStorage.setItem('duodash:userDataTs', String(Date.now()));
-          setLastUpdated(Date.now());
-        } catch {
-          // ignore persistence errors
-        }
-      } else {
-        setError(result.error || '刷新数据失败');
-      }
-    } catch {
-      setError('刷新失败，请稍后重试');
-    } finally {
-      setLoading(false);
-    }
+  if (loading && !hasUserData) {
+    return <LoadingScreen />;
   }
 
-  if (loading && !userData) {
-    return (
-      <div className="min-h-screen bg-[#235390] flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-xl p-12 text-center">
-          <img src="/duo-owl.svg" alt="Duo" width="96" height="96" className="w-24 h-24 mx-auto mb-6 animate-bounce" />
-          <h2 className="text-2xl font-bold text-gray-700 mb-4">正在加载数据...</h2>
-          <p className="text-gray-500">正在连接 Duolingo API</p>
-        </div>
-      </div>
-    );
+  if (!hasUserData && !showLogin && Boolean(error)) {
+    return <ErrorScreen error={error!} onRetry={refresh} />;
   }
 
-  if (!userData && isConfigured && error) {
-    return (
-      <div className="min-h-screen bg-[#235390] flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-xl p-12 text-center max-w-md">
-          <div className="text-6xl mb-6">😢</div>
-          <h2 className="text-2xl font-bold text-gray-700 mb-4">连接失败</h2>
-          <p className="text-red-500 mb-6">{error}</p>
-          <p className="text-gray-700 text-sm mb-6">请检查环境变量中的 DUOLINGO_USERNAME 和 DUOLINGO_JWT 配置是否正确</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-[#58cc02] text-white font-bold py-3 px-6 rounded-xl hover:bg-[#4caf00]"
-          >
-            重试
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!userData && showLogin) {
+  if (!hasUserData && showLogin) {
     return (
       <LoginScreen
-        onConnect={handleConnect}
         onJsonInput={handleJsonInput}
         onDemo={handleDemo}
         loading={loading}
@@ -292,96 +118,96 @@ export function DuoDashApp(): React.ReactElement {
     );
   }
 
-  const viewData = userData ?? PLACEHOLDER_DATA;
-  const hasTimeHistory = viewData.dailyTimeHistory?.some(d => d.time > 0);
-  const hasYearlyHistory = userData?.yearlyXpHistory?.length;
-
   return (
-    <div className="min-h-screen bg-[#f7f7f7]">
-      <style>{ANIMATION_STYLES}</style>
+    <div className="min-h-screen overflow-x-hidden bg-surface-background">
+      <Navbar loading={loading} lastUpdated={lastUpdated} onRefresh={refresh} onShare={() => setShowShareModal(true)} />
 
-      <Navbar loading={loading} lastUpdated={lastUpdated} onRefresh={handleRefresh} onShare={() => setShowShareModal(true)} />
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pb-6 sm:pb-8">
+        <div className="max-w-7xl mx-auto rounded-3xl bg-surface-background">
+          <div className="px-0 py-2 sm:px-2 sm:py-4 md:px-4 lg:px-6">
+            <PageHeader userData={userData} viewData={viewData} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <PageHeader userData={userData} viewData={viewData} />
+            <div className="space-y-3 sm:space-y-4">
+              <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+                {STAT_CARDS.map((card) => (
+                  <StatCard
+                    key={card.label}
+                    icon={card.icon}
+                    iconBgClass={card.iconBgClass}
+                    value={userData ? card.value(viewData) : '—'}
+                    label={card.label}
+                    colorClass={card.colorClass}
+                  />
+                ))}
+              </div>
 
-        <div className="space-y-6">
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
-            <StatCard icon="⚡" value={userData ? viewData.totalXp.toLocaleString() : '—'} label="总经验" colorClass="text-yellow-500" seq={1} />
-            <StatCard icon="📅" value={userData ? viewData.accountAgeDays : '—'} label="注册天数" colorClass="text-blue-500" seq={2} />
-            <StatCard icon="📚" value={userData ? viewData.courses.length : '—'} label="学习课程" colorClass="text-teal-500" seq={3} />
-            <StatCard icon="⏱️" value={userData ? viewData.estimatedLearningTime : '—'} label="预估投入" colorClass="text-purple-500" seq={4} isLargeText={false} />
-          </div>
-
-          <div className={`grid gap-4 ${hasTimeHistory ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-            <div className="bg-white rounded-2xl p-4 shadow-sm border-2 border-b-4 border-gray-200 animate-seq seq-5">
-              <h2 className="text-gray-700 font-bold text-lg mb-3 flex items-center gap-2">
-                <span>⚡</span> 最近 7 天经验
-              </h2>
-              {userData && shouldRenderAboveFoldCharts ? (
-                <Suspense fallback={<ChartSkeleton />}>
-                  <LazyXpHistoryChart data={viewData.dailyXpHistory} />
-                </Suspense>
-              ) : (
-                <ChartSkeleton />
-              )}
-            </div>
-            {hasTimeHistory && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm border-2 border-b-4 border-gray-200 animate-seq seq-6">
-                <h2 className="text-gray-700 font-bold text-lg mb-3 flex items-center gap-2">
-                  <span>⏱️</span> 最近 7 天学习时间
-                </h2>
-                {userData && shouldRenderAboveFoldCharts ? (
-                  <Suspense fallback={<ChartSkeleton />}>
-                    <LazyTimeHistoryChart data={viewData.dailyTimeHistory!} />
-                  </Suspense>
-                ) : (
-                  <ChartSkeleton />
+              <div className={`grid gap-3 sm:gap-4 ${hasTimeHistory ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'} w-full`}>
+                <div className="panel-card flex w-full min-w-0 flex-col gap-2 p-3 sm:p-4">
+                  <h2 className="panel-title text-base sm:text-lg">
+                    <TrendIcon className="panel-title-icon h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="leading-none">最近 7 天经验</span>
+                  </h2>
+                  {hasUserData ? (
+                    <Suspense fallback={<ChartSkeleton />}>
+                      <LazyXpHistoryChart data={viewData.dailyXpHistory} />
+                    </Suspense>
+                  ) : (
+                    <ChartSkeleton />
+                  )}
+                </div>
+                {hasTimeHistory && (
+                  <div className="panel-card flex w-full min-w-0 flex-col gap-2 p-3 sm:p-4">
+                    <h2 className="panel-title text-base sm:text-lg">
+                      <TimeIcon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-status-info" />
+                      <span className="leading-none">最近 7 天学习时间</span>
+                    </h2>
+                    {hasUserData ? (
+                      <Suspense fallback={<ChartSkeleton />}>
+                        <LazyTimeHistoryChart data={viewData.dailyTimeHistory!} />
+                      </Suspense>
+                    ) : (
+                      <ChartSkeleton />
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
 
-          <CourseList courses={viewData.courses} seq={7} />
+              <CourseList courses={viewData.courses} />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 animate-seq seq-8">
-              {userData ? (
-                <Suspense fallback={<div className="bg-white rounded-2xl p-6 h-32 animate-pulse" />}>
-                  <LazyAiCoach userData={userData} />
-                </Suspense>
-              ) : (
-                <div className="bg-white rounded-2xl p-6 h-32 animate-pulse" />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div className="lg:col-span-2">
+                  {userData ? (
+                    <Suspense fallback={<div className="panel-card h-32 animate-pulse p-4 sm:p-6" />}>
+                      <LazyAiCoach userData={userData} />
+                    </Suspense>
+                  ) : (
+                    <div className="panel-card h-32 animate-pulse p-4 sm:p-6" />
+                  )}
+                </div>
+                <TodayOverview userData={userData} />
+              </div>
+
+              {hasYearlyHistory && (
+                <div className="panel-card animate-fade-in-up p-4 sm:p-6">
+                  <h2 className="panel-title mb-3 sm:mb-4 text-base sm:text-lg">
+                    <HeatmapIcon className="panel-title-icon h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="leading-none">年度学习热力图</span>
+                  </h2>
+                  <Suspense fallback={<div className="h-40 sm:h-48 w-full bg-neutral-100 rounded-card animate-pulse" />}>
+                    <LazyHeatmapChart data={userData!.yearlyXpHistory!} />
+                  </Suspense>
+                </div>
               )}
-            </div>
-            <TodayOverview userData={userData} seq={9} />
-          </div>
 
-          {hasYearlyHistory && (
-            <div
-              ref={heatmapSentinelRef}
-              className="bg-white rounded-2xl p-6 shadow-sm border-2 border-b-4 border-gray-200 animate-seq seq-10"
-            >
-              <h2 className="text-gray-700 font-bold text-xl mb-4">📅 年度学习热力图</h2>
-              {shouldRenderHeatmap ? (
-                <Suspense fallback={<div className="h-48 w-full bg-gray-100 rounded-xl animate-pulse" />}>
-                  <LazyHeatmapChart data={userData!.yearlyXpHistory!} />
-                </Suspense>
-              ) : (
-                <div className="h-48 w-full bg-gray-50 rounded-xl flex items-center justify-center text-gray-600 text-sm">
-                  向下滚动时加载热力图…
+              {hasYearlyHistory && (
+                <div className="animate-fade-in-up">
+                  <Suspense fallback={<div className="h-48 sm:h-64 w-full bg-neutral-100 rounded-card animate-pulse" />}>
+                    <LazyAchievementsSection data={userData!.yearlyXpHistory!} />
+                  </Suspense>
                 </div>
               )}
             </div>
-          )}
-
-          {hasYearlyHistory && (
-            <div className="animate-seq seq-11">
-              <Suspense fallback={<div className="h-64 w-full bg-gray-100 rounded-2xl animate-pulse" />}>
-                <LazyAchievementsSection data={userData!.yearlyXpHistory!} />
-              </Suspense>
-            </div>
-          )}
+          </div>
         </div>
       </main>
 

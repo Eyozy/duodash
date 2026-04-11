@@ -1,32 +1,40 @@
 import React from 'react';
 import type { Course } from '../../types';
+import { DistributionIcon } from '../icons';
 
 const CHART_COLORS = ['#58cc02', '#ce82ff', '#ff9600', '#ff4b4b', '#1cb0f6', '#ffc800'];
 
 interface CourseListProps {
   courses: Course[];
-  seq: number;
 }
 
-export function CourseList({ courses, seq }: CourseListProps): React.ReactElement {
+export const CourseList = React.memo(function CourseList({ courses }: CourseListProps): React.ReactElement {
   const sortedCourses = [...courses].sort((a, b) => b.xp - a.xp);
   const totalCourseXp = sortedCourses.reduce((acc, c) => acc + c.xp, 0);
   const maxCourseXp = sortedCourses[0]?.xp ?? 0;
 
   return (
-    <div className={`bg-white rounded-2xl shadow-sm border-2 border-b-4 border-gray-200 animate-seq seq-${seq}`}>
-      <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100">
-        <h2 className="text-gray-700 font-bold text-lg">语言分布</h2>
+    <div className="panel-card animate-fade-in-up">
+      <div className="panel-header">
+        <h2 className="panel-title">
+          <DistributionIcon className="panel-title-icon h-5 w-5" />
+          <span className="leading-none">语言分布</span>
+        </h2>
         {courses.length > 0 && (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-neutral-500 whitespace-nowrap">
             共 {courses.length} 门课程 · {totalCourseXp.toLocaleString()} XP
           </span>
         )}
       </div>
 
       {courses.length > 0 ? (
-        <div className="p-4">
-          <div className="flex flex-wrap gap-3">
+        <div className="p-3 sm:p-4">
+          <div className={`grid gap-3 ${
+            courses.length === 1 ? 'grid-cols-1' :
+            courses.length === 2 ? 'grid-cols-1 sm:grid-cols-2' :
+            courses.length === 3 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' :
+            'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+          }`}>
             {sortedCourses.map((course, idx) => {
               const percent = totalCourseXp > 0 ? ((course.xp / totalCourseXp) * 100).toFixed(1) : '0';
               const relativeWidth = maxCourseXp > 0 ? (course.xp / maxCourseXp) * 100 : 0;
@@ -35,23 +43,23 @@ export function CourseList({ courses, seq }: CourseListProps): React.ReactElemen
               return (
                 <div
                   key={course.id}
-                  className="flex-1 min-w-[200px] sm:min-w-[240px] bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all"
+                  className="panel-card-muted w-full p-3 sm:p-4 transition-colors hover:border-[#58cc02]"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                    <span className="font-bold text-gray-700 text-sm truncate">{course.title}</span>
+                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-pill flex-shrink-0" style={{ backgroundColor: color }} />
+                    <span className="font-bold text-neutral-800 text-xs sm:text-sm truncate">{course.title}</span>
                   </div>
 
                   <div className="flex items-baseline gap-1 mb-2">
-                    <span className="text-xl font-black" style={{ color }}>{course.xp.toLocaleString()}</span>
-                    <span className="text-xs text-gray-400">XP</span>
-                    <span className="text-xs text-gray-500 ml-auto">{percent}%</span>
+                    <span className="text-lg sm:text-xl font-black tabular-nums" style={{ color }}>{course.xp.toLocaleString()}</span>
+                    <span className="text-[10px] sm:text-xs text-neutral-400">XP</span>
+                    <span className="text-[10px] sm:text-xs text-neutral-500 ml-auto tabular-nums">{percent}%</span>
                   </div>
 
-                  <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-1.5 sm:h-2 w-full bg-neutral-100 rounded-pill overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{ width: `${relativeWidth}%`, backgroundColor: color }}
+                      className="h-full rounded-pill origin-left transition-transform duration-200 ease-out"
+                      style={{ transform: `scaleX(${relativeWidth / 100})`, backgroundColor: color }}
                     />
                   </div>
                 </div>
@@ -60,10 +68,8 @@ export function CourseList({ courses, seq }: CourseListProps): React.ReactElemen
           </div>
         </div>
       ) : (
-        <div className="text-gray-500 text-sm text-center py-6">暂无课程数据</div>
+        <div className="text-neutral-500 text-sm text-center py-6">暂无课程数据</div>
       )}
     </div>
   );
-}
-
-export default CourseList;
+});

@@ -1,98 +1,126 @@
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
+import { MilestoneXpIcon, StreakCardIcon } from '../../icons';
 
 interface MilestoneCardProps {
   type: 'streak' | 'xp';
   value: number;
   date?: string;
+  accountAgeDays?: number;
 }
 
 const CONFIG = {
   streak: {
-    icon: (
-      <svg className="w-24 h-24 drop-shadow-md" viewBox="0 0 24 24" fill="none" stroke="none">
-        <path d="M12 2C12 2 8 6 8 10C8 12.21 9.79 14 12 14C14.21 14 16 12.21 16 10C16 6 12 2 12 2Z" fill="#FFC800" />
-        <path d="M12 8C12 8 10 10 10 12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12C14 10 12 8 12 8Z" fill="#FFF" fillOpacity="0.4" />
-      </svg>
-    ),
+    icon: <StreakCardIcon className="h-8 w-8 text-brand-500 sm:h-9 sm:w-9" />,
+    badge: '连胜里程碑',
     label: '连续打卡',
+    eyebrow: '学习习惯',
+    summary: '你已经把学习变成每天都会发生的小事。',
+    insightLabel: '学习节奏',
+    insightValue: '每天坚持',
     unit: '天',
-    bgColor: 'bg-orange-500',
-    borderColor: 'border-orange-600',
-    textColor: 'text-white',
-    accentColor: 'text-yellow-200'
+    accentClass: 'text-brand-600',
+    valueClass: 'text-brand-500',
+    badgeClass: 'border-brand-100 bg-brand-50 text-brand-600',
+    iconWrapClass: 'bg-brand-50 border-brand-100',
+    surfaceClass: 'from-brand-50 via-white to-white',
   },
   xp: {
-    icon: (
-      <svg className="w-24 h-24 drop-shadow-md" viewBox="0 0 24 24" fill="none" stroke="none">
-        <path d="M12 2L14.09 8.26L20.18 8.63L15.54 12.74L16.91 19.37L12 15.77L7.09 19.37L8.46 12.74L3.82 8.63L9.91 8.26L12 2Z" fill="#FFC800" />
-      </svg>
-    ),
+    icon: <MilestoneXpIcon className="h-8 w-8 text-status-info sm:h-9 sm:w-9" />,
+    badge: '经验里程碑',
     label: '总经验值',
+    eyebrow: '成长轨迹',
+    summary: '每一次练习都在把长期积累变得更清晰。',
+    insightLabel: '平均每天',
+    insightValue: undefined,
     unit: 'XP',
-    bgColor: 'bg-blue-500',
-    borderColor: 'border-blue-600',
-    textColor: 'text-white',
-    accentColor: 'text-blue-200'
+    accentClass: 'text-status-info',
+    valueClass: 'text-status-info',
+    badgeClass: 'border-status-info bg-status-info-bg text-status-info',
+    iconWrapClass: 'bg-status-info-bg border-status-info',
+    surfaceClass: 'from-status-info-bg via-white to-white',
   },
-};
+} as const;
 
 export const MilestoneCard = forwardRef<HTMLDivElement, MilestoneCardProps>(
-  ({ type, value, date }, ref) => {
-    const { icon, label, unit, bgColor, borderColor, textColor, accentColor } = CONFIG[type];
+  ({ type, value, date, accountAgeDays }, ref) => {
+    const {
+      icon,
+      badge,
+      label,
+      eyebrow,
+      summary,
+      insightLabel,
+      insightValue,
+      unit,
+      accentClass,
+      valueClass,
+      badgeClass,
+      iconWrapClass,
+      surfaceClass,
+    } = CONFIG[type];
+
     const displayDate = date || new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' });
-    const displayValue = value.toLocaleString();
+
+    const displayInsightValue = type === 'xp' && accountAgeDays
+      ? `${Math.round(value / accountAgeDays)} XP`
+      : insightValue;
 
     return (
       <div
         ref={ref}
-        className={`relative w-full max-w-[320px] aspect-[4/5] mx-auto rounded-3xl overflow-hidden ${bgColor} p-6 flex flex-col items-center justify-between`}
+        className={`panel-card relative mx-auto flex aspect-[4/5] w-full max-w-[340px] sm:max-w-[360px] flex-col overflow-hidden rounded-[24px] sm:rounded-[28px] border-[2.5px] sm:border-[3px] border-slate-300 bg-gradient-to-b p-4 sm:p-5 shadow-[0_12px_48px_rgba(15,23,42,0.18)] ${surfaceClass}`}
       >
-        {/* Decorative Patterns */}
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-           <svg width="100%" height="100%">
-             <pattern id="dotPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-               <circle cx="2" cy="2" r="2" fill="currentColor" className="text-white"/>
-             </pattern>
-             <rect width="100%" height="100%" fill="url(#dotPattern)" />
-           </svg>
-        </div>
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.92),transparent_32%)]" />
+        <div className="pointer-events-none absolute -right-10 top-16 h-36 w-36 rounded-full bg-white/55 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-40 w-full bg-[linear-gradient(180deg,transparent,rgba(255,255,255,0.45))]" />
 
-        {/* Content */}
-        <div className="relative z-10 w-full flex flex-col items-center flex-1 justify-center gap-6">
-           {/* Top Date Badge */}
-           <div className="bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-xl text-sm font-bold text-white/90 border border-white/20">
-             {displayDate}
-           </div>
-
-           {/* Icon & Value */}
-           <div className="flex flex-col items-center gap-2">
-             <div className="transform hover:scale-105 transition-transform duration-300">
-               {icon}
-             </div>
-             <div className="flex flex-col items-center">
-               <span className={`text-6xl font-black ${textColor} tracking-tight`}>
-                 {displayValue}
-               </span>
-               <span className={`text-xl font-bold ${accentColor} uppercase tracking-wider`}>
-                 {unit}
-               </span>
-             </div>
-           </div>
-
-           {/* Label */}
-           <div className="bg-white rounded-2xl px-8 py-3">
-             <span className={`text-lg font-bold ${type === 'streak' ? 'text-orange-500' : 'text-blue-500'}`}>
-               {label}
-             </span>
-           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="relative z-10 mt-auto pt-4 opacity-80">
-          <div className="flex items-center gap-2 text-white font-bold text-sm">
-             <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-             DuoDash
+        <div className="relative z-10 flex h-full flex-col">
+          <div className="flex items-start justify-between gap-2 sm:gap-3">
+            <div className={`inline-flex items-center rounded-pill border px-2.5 sm:px-3 py-1 text-[10px] sm:text-xs font-bold ${badgeClass}`}>
+              {badge}
+            </div>
+            <div className="text-right text-[10px] sm:text-xs font-semibold text-neutral-500">
+              {displayDate}
+            </div>
           </div>
+
+          <div className="mt-3 sm:mt-4 flex flex-col items-start gap-2.5 sm:gap-3 text-left">
+            <div className={`flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-[14px] sm:rounded-[16px] border shadow-sm ${iconWrapClass}`}>
+              {icon}
+            </div>
+            <div className="min-w-0">
+              <div className="text-[10px] sm:text-xs font-bold tracking-[0.22em] sm:tracking-[0.24em] text-neutral-500">
+                {eyebrow}
+              </div>
+              <div className={`mt-1 text-[1.6rem] sm:text-[1.75rem] md:text-[1.95rem] font-black tracking-tight ${accentClass}`}>
+                {label}
+              </div>
+            </div>
+          </div>
+
+          <div data-export-card="inner" className="mt-3 sm:mt-4 rounded-[20px] sm:rounded-[24px] border border-slate-200/80 bg-white/88 px-3.5 sm:px-4 py-3 sm:py-3.5 backdrop-blur-sm">
+            <div className="flex items-end gap-1.5 sm:gap-2">
+              <span className={`text-[2.5rem] sm:text-[2.8rem] md:text-[3rem] font-black leading-none tracking-[-0.04em] tabular-nums ${valueClass}`}>
+                {value.toLocaleString()}
+              </span>
+              <span className="pb-0.5 sm:pb-1 text-xs sm:text-sm font-bold text-neutral-500">
+                {unit}
+              </span>
+            </div>
+            <p className="mt-2 text-xs sm:text-[13px] leading-5 text-neutral-700">
+              {summary}
+            </p>
+          </div>
+
+          <div data-export-card="inner" className="mt-3 sm:mt-4 rounded-[18px] sm:rounded-[20px] border border-slate-200/80 bg-white/92 px-3.5 sm:px-4 py-3 sm:py-3.5">
+            <div className="text-[10px] sm:text-[11px] font-bold tracking-[0.2em] sm:tracking-[0.22em] text-neutral-500">
+              {insightLabel}
+            </div>
+            <div className="mt-1.5 text-sm sm:text-[15px] md:text-base font-black text-neutral-800">
+              {displayInsightValue}
+            </div>
+          </div>
+
         </div>
       </div>
     );

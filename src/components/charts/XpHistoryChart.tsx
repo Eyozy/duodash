@@ -1,57 +1,62 @@
-import React, { useId, useMemo } from 'react';
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { DuoColors } from '../../styles/duolingoColors';
+import React, { useId, useMemo, useRef } from 'react';
+import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts';
+import { useChartDimensions } from '../../hooks/useChartDimensions';
+import {
+  CHART_TOOLTIP_STYLE,
+  CHART_GRID_STYLE,
+  CHART_X_AXIS_PROPS,
+  CHART_Y_AXIS_PROPS,
+  CHART_MARGIN,
+  createDotStyle,
+  ACTIVE_DOT_STYLE,
+  CHART_COLORS
+} from './chartConfig';
 
 export interface XpHistoryChartProps {
   data: { date: string; xp: number }[];
 }
 
-const tooltipStyle = {
-  borderRadius: '12px',
-  border: 'none',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-  fontSize: 12
-} as const;
-
-const dotStyle = { r: 3, fill: DuoColors.featherGreen, strokeWidth: 2, stroke: '#fff' } as const;
-const activeDotStyle = { r: 5 } as const;
-
 function XpHistoryChart({ data }: XpHistoryChartProps): React.ReactElement {
   const totalXp = useMemo(() => data.reduce((sum, d) => sum + d.xp, 0), [data]);
   const gradientId = useId();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dimensions = useChartDimensions(containerRef);
 
   return (
-    <div className="w-full min-w-0">
-      <div className="h-40 w-full min-w-0" style={{ minHeight: '160px', position: 'relative' }}>
-        <ResponsiveContainer width="100%" height={160}>
-          <AreaChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+    <div className="w-full">
+      <div ref={containerRef} className="w-full h-32 sm:h-40">
+        {dimensions.width > 0 && dimensions.height > 0 && (
+          <AreaChart width={dimensions.width} height={dimensions.height} data={data} margin={CHART_MARGIN}>
             <defs>
               <linearGradient id={`xpGradient-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={DuoColors.featherGreen} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={DuoColors.featherGreen} stopOpacity={0} />
+                <stop offset="5%" stopColor={CHART_COLORS.xp} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={CHART_COLORS.xp} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e5e5" />
-            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 10 }} dy={5} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 10 }} width={40} domain={[0, 'auto']} />
+            <CartesianGrid {...CHART_GRID_STYLE} />
+            <XAxis {...CHART_X_AXIS_PROPS} />
+            <YAxis {...CHART_Y_AXIS_PROPS} />
             <Tooltip
-              contentStyle={tooltipStyle}
-              formatter={(value: number) => [`${value} XP`, '经验值']}
+              contentStyle={CHART_TOOLTIP_STYLE}
+              formatter={(value: number | string | undefined) => {
+                const xp = typeof value === 'number' ? value : Number(value ?? 0);
+                return [`${xp} XP`, '经验值'];
+              }}
             />
             <Area
               type="monotone"
               dataKey="xp"
-              stroke={DuoColors.featherGreen}
+              stroke={CHART_COLORS.xp}
               strokeWidth={3}
               fill={`url(#xpGradient-${gradientId})`}
-              dot={dotStyle}
-              activeDot={activeDotStyle}
+              dot={createDotStyle(CHART_COLORS.xp)}
+              activeDot={ACTIVE_DOT_STYLE}
             />
           </AreaChart>
-        </ResponsiveContainer>
+        )}
       </div>
-      <div className="text-center text-xs text-gray-500 pb-3">
-        本周共获得 <span style={{ color: DuoColors.featherGreen }} className="font-bold">{totalXp}</span> XP
+      <div className="text-center text-xs text-neutral-500 pb-2 sm:pb-3">
+        本周共获得 <span style={{ color: CHART_COLORS.xp }} className="font-bold tabular-nums">{totalXp}</span> XP
       </div>
     </div>
   );

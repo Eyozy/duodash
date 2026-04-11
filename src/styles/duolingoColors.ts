@@ -37,25 +37,3 @@ export const AchievementTiers = {
   platinum: { primary: '#1CB0F6', secondary: '#1899D6', bg: '#EBF8FF', text: '#0C7BB3' },
   diamond: { primary: '#CE82FF', secondary: '#B35FE0', bg: '#F9F0FF', text: '#8B4FC7' },
 } as const;
-
-export const AchievementCategories = {
-  streak: { color: '#FF9600', bgColor: '#FFF3E0', icon: 'flame' },
-  dailyXp: { color: '#FFC800', bgColor: '#FFFDE7', icon: 'bolt' },
-  totalDays: { color: '#58CC02', bgColor: '#E8F5E9', icon: 'calendar' },
-  totalXp: { color: '#1CB0F6', bgColor: '#E3F2FD', icon: 'trophy' },
-} as const;
-
-export const ChartColors = {
-  xp: { primary: '#58CC02', gradient: ['#58CC02', '#89E219'] },
-  time: { primary: '#1CB0F6', gradient: ['#1CB0F6', '#7DD3FC'] },
-  heatmap: { empty: '#EBEDF0', levels: ['#9BE9A8', '#40C463', '#30A14E', '#216E39'] },
-} as const;
-
-export const StatCardColors = {
-  totalXp: '#FFC800',
-  accountAge: '#1CB0F6',
-  courses: '#58CC02',
-  learningTime: '#CE82FF',
-  streak: '#FF9600',
-  gems: '#1CB0F6',
-} as const;
