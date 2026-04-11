@@ -1,7 +1,9 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import type { UserData } from '../../types';
 import { MilestoneCard, WeeklySummaryCard } from './cards';
 import { useSnapdom } from './useSnapdom';
+import { DownloadImageIcon, MilestoneXpIcon, ShareIcon, StreakCardIcon, WeeklyReportIcon } from '../icons';
+import { formatMonthDay, formatDuration, getMonday } from '../../utils/dateUtils';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -11,159 +13,185 @@ interface ShareModalProps {
 
 type CardType = 'milestone-streak' | 'milestone-xp' | 'weekly';
 
+interface WeeklySummaryData {
+  daysLearned: number;
+  activeStreak: number;
+  completionRate: number;
+  averageXp: number;
+  bestDayLabel: string;
+  bestDayXp: number;
+  totalXp: number;
+  totalTime: string;
+  dateRange: string;
+}
+
 const CARD_OPTIONS: { type: CardType; label: string; icon: React.ReactNode }[] = [
   {
     type: 'milestone-streak',
     label: '连胜成就',
-    icon: (
-      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.2-2.2.5-3.3.3-1.09.53-2.2.25-3.6z" />
-      </svg>
-    ),
+    icon: <StreakCardIcon className="w-4 h-4" />,
   },
   {
     type: 'milestone-xp',
     label: '经验突破',
-    icon: (
-      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2L14.09 8.26L20.18 8.63L15.54 12.74L16.91 19.37L12 15.77L7.09 19.37L8.46 12.74L3.82 8.63L9.91 8.26L12 2Z" />
-      </svg>
-    ),
+    icon: <MilestoneXpIcon className="w-4 h-4" />,
   },
   {
     type: 'weekly',
     label: '本周报告',
-    icon: (
-      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M3 3v18h18" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M18 9l-5 5-4-4-3 3" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
+    icon: <WeeklyReportIcon className="w-4 h-4" />,
   },
 ];
+
+function getCardExportName(cardType: CardType): string {
+  switch (cardType) {
+    case 'milestone-streak':
+      return 'duodash-streak';
+    case 'milestone-xp':
+      return 'duodash-xp';
+    case 'weekly':
+      return 'duodash-weekly';
+  }
+}
+
+function buildWeeklySummaryData(userData: UserData, now = new Date()): WeeklySummaryData {
+  const weeklyXp = userData.weeklyXpHistory || [];
+  const weeklyTime = userData.weeklyTimeHistory || [];
+  const completedDays = weeklyXp.filter(day => !day.isFuture);
+  const totalXp = completedDays.reduce((sum, day) => sum + day.xp, 0);
+  const daysLearned = completedDays.filter(day => day.xp > 0).length;
+  const totalMinutes = weeklyTime.reduce((sum, day) => sum + (day.isFuture ? 0 : day.time), 0);
+  const averageXp = daysLearned > 0 ? Math.round(totalXp / daysLearned) : 0;
+  const completionRate = completedDays.length > 0 ? Math.round((daysLearned / completedDays.length) * 100) : 0;
+  const bestDay = completedDays.reduce(
+    (best, day) => (day.xp > best.xp ? day : best),
+    { date: '—', xp: 0, isFuture: false }
+  );
+  const activeStreak = completedDays.reduce(
+    (streak, day) => (day.xp > 0 ? streak + 1 : 0),
+    0
+  );
+  const totalTime = formatDuration(totalMinutes);
+  const monday = getMonday(now);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  return {
+    daysLearned,
+    activeStreak,
+    completionRate,
+    averageXp,
+    bestDayLabel: bestDay.date,
+    bestDayXp: bestDay.xp,
+    totalXp,
+    totalTime,
+    dateRange: `${formatMonthDay(monday)} - ${formatMonthDay(sunday)}`,
+  };
+}
 
 export function ShareModal({ isOpen, onClose, userData }: ShareModalProps): React.ReactElement | null {
   const [selectedCard, setSelectedCard] = useState<CardType>('milestone-streak');
   const cardRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const { isExporting, exportToPng } = useSnapdom();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    closeButtonRef.current?.focus();
+  }, [isOpen]);
+
+  const weeklyData = useMemo(() =>
+    selectedCard === 'weekly' ? buildWeeklySummaryData(userData) : null,
+    [selectedCard, userData]
+  );
 
   const handleExport = useCallback(async () => {
     if (!cardRef.current) return;
-    const filenames: Record<CardType, string> = {
-      'milestone-streak': 'duodash-streak',
-      'milestone-xp': 'duodash-xp',
-      'weekly': 'duodash-weekly',
-    };
-    await exportToPng(cardRef.current, { filename: filenames[selectedCard], scale: 3 });
+    await exportToPng(cardRef.current, { filename: getCardExportName(selectedCard), scale: 3 });
   }, [selectedCard, exportToPng]);
-
-  const getWeeklyData = useCallback(() => {
-    // 使用自然周数据（周一到周日）
-    const weeklyXp = userData.weeklyXpHistory || [];
-    const weeklyTime = userData.weeklyTimeHistory || [];
-
-    const dailyXp = weeklyXp.map(d => d.xp);
-    const isFutureFlags = weeklyXp.map(d => d.isFuture);
-    const totalXp = dailyXp.reduce((a, b) => a + b, 0);
-    const daysLearned = weeklyXp.filter(d => d.xp > 0 && !d.isFuture).length;
-    const totalMinutes = weeklyTime.reduce((a, d) => a + (d.isFuture ? 0 : d.time), 0);
-    const hours = Math.floor(totalMinutes / 60);
-    const mins = totalMinutes % 60;
-    const totalTime = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-
-    // 计算自然周的日期范围（周一到周日）
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - daysToMonday);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-
-    const dateRange = `${monday.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })} - ${sunday.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })}`;
-
-    return { daysLearned, totalXp, totalTime, dailyXp, dateRange, isFutureFlags };
-  }, [userData]);
 
   if (!isOpen) return null;
 
-  const weeklyData = getWeeklyData();
-
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden"
+        className="w-full max-w-lg overflow-y-auto rounded-[20px] sm:rounded-[28px] border border-neutral-100 bg-surface shadow-tooltip max-h-[90vh]"
         style={{ scrollbarWidth: 'none' }}
         onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-modal-title"
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            onClose();
+          }
+        }}
       >
-        <div className="p-5 sm:p-6">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-5">
-            <h2 className="text-xl font-bold text-gray-700 flex items-center gap-2">
-              <span>📤</span> 分享卡片
-            </h2>
+        <div className="p-4 sm:p-5">
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <h2 id="share-modal-title" className="flex items-center gap-2 text-lg sm:text-xl font-black text-neutral-800">
+                <ShareIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-500" /> 分享卡片
+              </h2>
+              <p className="mt-2 text-xs sm:text-sm leading-5 sm:leading-6 text-neutral-500">
+                选一张最能代表你这段学习进展的卡片。
+              </p>
+            </div>
             <button
+              ref={closeButtonRef}
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer border border-gray-200"
+              className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-button border border-neutral-100 text-neutral-400 transition-colors duration-200 hover:bg-brand-50 hover:text-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2"
               aria-label="关闭"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
           </div>
 
-          {/* Card Type Selector */}
-          <div className="grid grid-cols-3 gap-2 mb-6 sm:flex sm:flex-wrap">
+          <div className="mb-4 flex flex-row flex-wrap gap-2">
             {CARD_OPTIONS.map(opt => (
               <button
                 key={opt.type}
                 onClick={() => setSelectedCard(opt.type)}
-                className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer border-2 ${
+                className={`flex flex-1 min-w-0 flex-row items-center justify-center gap-2 rounded-button border px-3 py-2.5 sm:px-4 text-xs sm:text-sm font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2 ${
                   selectedCard === opt.type
-                    ? 'bg-[#58cc02] text-white border-[#58cc02]'
-                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                    ? 'border-brand-500 bg-brand-100 text-brand-700 shadow-sm'
+                    : 'border-neutral-100 bg-surface text-neutral-800 hover:bg-brand-50 hover:border-brand-100'
                 }`}
               >
-                {opt.icon}
-                <span className="whitespace-nowrap">{opt.label}</span>
+                <span className="shrink-0">{opt.icon}</span>
+                <span className="whitespace-nowrap leading-tight">{opt.label}</span>
               </button>
             ))}
           </div>
 
-          {/* Card Preview */}
-          <div className="flex justify-center mb-6 py-2 px-1">
-            {selectedCard === 'milestone-streak' && (
-              <MilestoneCard ref={cardRef} type="streak" value={userData.streak} />
-            )}
-            {selectedCard === 'milestone-xp' && (
-              <MilestoneCard ref={cardRef} type="xp" value={userData.totalXp} />
-            )}
-            {selectedCard === 'weekly' && (
-              <WeeklySummaryCard
-                ref={cardRef}
-                daysLearned={weeklyData.daysLearned}
-                totalXp={weeklyData.totalXp}
-                totalTime={weeklyData.totalTime}
-                dailyXp={weeklyData.dailyXp}
-                dateRange={weeklyData.dateRange}
-                isFutureFlags={weeklyData.isFutureFlags}
-              />
-            )}
+          <div className="mb-4">
+            <div className="mx-auto w-full max-w-[300px] sm:max-w-[332px] md:max-w-[344px]">
+              {selectedCard === 'milestone-streak' && (
+                <MilestoneCard ref={cardRef} type="streak" value={userData.streak} accountAgeDays={userData.accountAgeDays} />
+              )}
+              {selectedCard === 'milestone-xp' && (
+                <MilestoneCard ref={cardRef} type="xp" value={userData.totalXp} accountAgeDays={userData.accountAgeDays} />
+              )}
+              {selectedCard === 'weekly' && weeklyData && (
+                <WeeklySummaryCard ref={cardRef} summary={weeklyData} />
+              )}
+            </div>
           </div>
 
-          {/* Export Button */}
           <button
             onClick={handleExport}
             disabled={isExporting}
-            className="w-full py-3.5 bg-[#58cc02] hover:bg-[#4caf00] text-white font-bold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm border-2 border-b-4 border-[#4caf00] cursor-pointer flex items-center justify-center gap-2"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-button bg-[#58cc02] px-4 py-3 sm:py-3.5 font-bold text-white shadow-card transition-all duration-200 hover:bg-[#46a302] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-sm sm:text-base min-h-[48px]"
+            aria-label={isExporting ? '导出图片中' : '下载图片'}
           >
             {isExporting ? (
               <>
-                <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <svg className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
@@ -171,20 +199,13 @@ export function ShareModal({ isOpen, onClose, userData }: ShareModalProps): Reac
               </>
             ) : (
               <>
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" strokeLinecap="round" strokeLinejoin="round" />
-                  <polyline points="7 10 12 15 17 10" strokeLinecap="round" strokeLinejoin="round" />
-                  <line x1="12" y1="15" x2="12" y2="3" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                保存高清图片
+                <DownloadImageIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                下载图片
               </>
             )}
           </button>
-
         </div>
       </div>
     </div>
   );
 }
-
-export default ShareModal;

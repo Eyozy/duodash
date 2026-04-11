@@ -1,6 +1,6 @@
 import type { UserData } from "../types";
 
-export interface AiResponse {
+interface AiResponse {
   analysis: string;
   provider: string;
   model: string;

@@ -1,105 +1,112 @@
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
+import { WeeklyReportIcon } from '../../icons';
 
-interface WeeklySummaryCardProps {
+interface WeeklySummaryData {
   daysLearned: number;
+  activeStreak: number;
+  completionRate: number;
+  averageXp: number;
+  bestDayLabel: string;
+  bestDayXp: number;
   totalXp: number;
   totalTime: string;
-  dailyXp: number[];
   dateRange: string;
-  isFutureFlags?: boolean[];
 }
 
-const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日'];
+interface WeeklySummaryCardProps {
+  summary: WeeklySummaryData;
+}
+
+const STATUS_CONFIG = [
+  { minDays: 6, label: '火力全开', toneClass: 'text-brand-600', badgeClass: 'border-brand-100 bg-brand-50 text-brand-600' },
+  { minDays: 4, label: '稳定推进', toneClass: 'text-status-info', badgeClass: 'border-status-info bg-status-info-bg text-status-info' },
+  { minDays: 2, label: '持续积累', toneClass: 'text-yellow-600', badgeClass: 'border-yellow-100 bg-yellow-50 text-yellow-600' },
+  { minDays: 0, label: '重新起步', toneClass: 'text-neutral-500', badgeClass: 'border-neutral-100 bg-surface-background text-neutral-500' },
+] as const;
+
+function getWeeklyStatus(daysLearned: number) {
+  return STATUS_CONFIG.find((item) => daysLearned >= item.minDays) ?? STATUS_CONFIG[STATUS_CONFIG.length - 1];
+}
 
 export const WeeklySummaryCard = forwardRef<HTMLDivElement, WeeklySummaryCardProps>(
-  ({ daysLearned, totalXp, totalTime, dailyXp, dateRange, isFutureFlags = [] }, ref) => {
-    // 确保有数据，避免除以 0（只考虑非未来的数据）
-    const pastXp = dailyXp.filter((_, i) => !isFutureFlags[i]);
-    const maxXp = Math.max(...pastXp, 10); 
+  ({ summary }, ref) => {
+    const { daysLearned, activeStreak, completionRate, averageXp, bestDayLabel, bestDayXp, totalXp, totalTime, dateRange } = summary;
+    const status = getWeeklyStatus(daysLearned);
+    const progressPercent = Math.min(100, Math.max(12, (daysLearned / 7) * 100));
+    const highlight = activeStreak >= 3
+      ? `已经连续活跃 ${activeStreak} 天，节奏很稳。`
+      : bestDayXp > 0
+        ? `${bestDayLabel} 单日冲到 ${bestDayXp} XP，是这一周的高光时刻。`
+        : '这一周刚重新起步，下一次打开就是新的开始。';
 
     return (
       <div
         ref={ref}
-        className="relative w-full max-w-[320px] aspect-[4/5] mx-auto rounded-3xl overflow-hidden bg-green-500 p-6 flex flex-col justify-between"
+        className="panel-card relative mx-auto flex aspect-[4/5] w-full max-w-[340px] sm:max-w-[360px] flex-col overflow-hidden rounded-[24px] sm:rounded-[28px] border-[2.5px] sm:border-[3px] border-slate-300 bg-gradient-to-b from-status-info-bg via-white to-white p-4 sm:p-5 shadow-[0_12px_48px_rgba(15,23,42,0.18)]"
       >
-        {/* Decorative Patterns */}
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-           <svg width="100%" height="100%">
-             <pattern id="dotPatternGreen" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-               <circle cx="2" cy="2" r="2" fill="currentColor" className="text-white"/>
-             </pattern>
-             <rect width="100%" height="100%" fill="url(#dotPatternGreen)" />
-           </svg>
-        </div>
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(28,176,246,0.18),transparent_28%)]" />
+        <div className="pointer-events-none absolute -right-12 top-16 h-40 w-40 rounded-full bg-white/50 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-40 w-full bg-[linear-gradient(180deg,transparent,rgba(255,255,255,0.4))]" />
 
-        {/* Content */}
-        <div className="relative z-10 flex flex-col h-full">
-            {/* Header */}
-            <div className="flex flex-col items-center gap-1 mb-2 shrink-0">
-                <div className="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-xl text-xs font-bold text-white/90 border border-white/20">
-                    {dateRange}
-                </div>
+        <div className="relative z-10 flex h-full flex-col">
+          <div className="flex items-start justify-between gap-2 sm:gap-3">
+            <div className="inline-flex items-center rounded-pill border border-status-info bg-white px-2.5 sm:px-3 py-1 text-[10px] sm:text-xs font-bold text-status-info">
+              本周报告
             </div>
-
-            {/* Main Stats - XP */}
-            <div className="flex flex-col items-center mb-3 shrink-0">
-                 <div className="transform hover:scale-105 transition-transform duration-300">
-                    <svg className="w-8 h-8 mb-0.5 drop-shadow-sm text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2L14.09 8.26L20.18 8.63L15.54 12.74L16.91 19.37L12 15.77L7.09 19.37L8.46 12.74L3.82 8.63L9.91 8.26L12 2Z" />
-                    </svg>
-                 </div>
-                 <span className="text-4xl font-black text-white tracking-tight">{totalXp.toLocaleString()}</span>
-                 <span className="text-xs font-bold text-green-100 uppercase tracking-widest">本周 XP</span>
+            <div className="text-right text-[10px] sm:text-xs font-semibold text-neutral-500">
+              {dateRange}
             </div>
+          </div>
 
-            {/* Secondary Stats Grid */}
-            <div className="grid grid-cols-2 gap-2 mb-3 shrink-0">
-                <div className="bg-white/10 rounded-xl p-2 flex flex-col items-center border border-white/10">
-                    <span className="text-xl font-black text-white">{daysLearned}</span>
-                    <span className="text-[9px] font-bold text-green-100 uppercase">天数</span>
-                </div>
-                <div className="bg-white/10 rounded-xl p-2 flex flex-col items-center border border-white/10">
-                    <span className="text-xl font-black text-white">{totalTime}</span>
-                    <span className="text-[9px] font-bold text-green-100 uppercase">时长</span>
-                </div>
+          <div className="mt-3 sm:mt-4 flex flex-col items-start gap-2.5 sm:gap-3 text-left">
+            <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-[14px] sm:rounded-[16px] border border-status-info bg-white shadow-sm">
+              <WeeklyReportIcon className="h-7 w-7 sm:h-8 sm:w-8 text-status-info" />
             </div>
-
-            {/* Chart Area */}
-            <div className="flex-1 flex flex-col justify-center w-full">
-                <div className="flex items-end justify-between h-20 px-1 gap-2">
-                    {dailyXp.map((xp, i) => {
-                        const isFuture = isFutureFlags[i] ?? false;
-                        const heightPercent = isFuture ? 0 : (xp === 0 ? 0 : Math.max(15, (xp / maxXp) * 100));
-                        return (
-                            <div key={i} className="flex flex-col items-center gap-1.5 flex-1 h-full justify-end group">
-                                <div className="w-full relative flex items-end justify-center h-full">
-                                   {/* Background bar */}
-                                   <div className="absolute bottom-0 w-full max-w-[8px] h-full bg-black/10 rounded-full" />
-
-                                   {/* Active bar or future placeholder */}
-                                   {isFuture ? (
-                                     <div className="w-full max-w-[8px] h-2 rounded-full z-10 bg-white/20 border border-dashed border-white/40" />
-                                   ) : (
-                                     <div
-                                       style={{ height: xp > 0 ? `${heightPercent}%` : '8px' }}
-                                       className={`w-full max-w-[8px] rounded-full z-10 transition-all duration-500 ${xp > 0 ? 'bg-white' : 'bg-white/20'}`}
-                                     />
-                                   )}
-                                </div>
-                                <span className={`text-[9px] font-bold uppercase ${isFuture ? 'text-green-200/50' : 'text-green-100'}`}>{WEEKDAYS[i]}</span>
-                            </div>
-                        )
-                    })}
-                </div>
+            <div className="min-w-0">
+              <div className="text-[10px] sm:text-xs font-bold tracking-[0.22em] sm:tracking-[0.24em] text-neutral-500">
+                一周进展
+              </div>
+              <div className="mt-1 text-[1.65rem] sm:text-[1.8rem] md:text-[2rem] font-black tracking-[-0.03em] text-neutral-800">
+                {totalXp.toLocaleString()} XP
+              </div>
+              <div className="mt-1.5 text-xs sm:text-sm font-semibold text-neutral-500">
+                完成率 {completionRate}% · 日均 {averageXp.toLocaleString()} XP
+              </div>
             </div>
+          </div>
 
-            {/* Footer */}
-            <div className="relative z-10 shrink-0 pt-4 flex justify-center">
-                <div className="flex items-center gap-2 text-white/80 font-bold text-sm">
-                    <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
-                    DuoDash
-                </div>
+          <div data-export-card="inner" className="mt-3 sm:mt-4 rounded-[20px] sm:rounded-[24px] border border-slate-200/80 bg-white/88 p-3.5 sm:p-4 backdrop-blur-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs sm:text-sm font-semibold text-neutral-800">
+                本周学习了 {daysLearned} 天
+              </div>
+              <span className={`inline-flex items-center rounded-pill border px-2.5 sm:px-3 py-1 text-[10px] sm:text-xs font-bold ${status.badgeClass}`}>
+                {status.label}
+              </span>
             </div>
+            <div className="mt-2.5 sm:mt-3 h-1.5 sm:h-2 rounded-pill bg-surface-background">
+              <div className="h-full rounded-pill bg-brand-500" style={{ width: `${progressPercent}%` }} />
+            </div>
+          </div>
+
+          <div className="mt-3 sm:mt-4 grid grid-cols-2 gap-2.5 sm:gap-3">
+            <div data-export-card="inner" className="rounded-[18px] sm:rounded-[20px] border border-slate-200/80 bg-white/94 px-3 sm:px-4 py-3 sm:py-3.5">
+              <div className="text-[10px] sm:text-[11px] font-bold tracking-[0.2em] sm:tracking-[0.22em] text-neutral-500">
+                学习时长
+              </div>
+              <div className="mt-1.5 text-sm sm:text-base md:text-lg font-black text-neutral-800 tabular-nums">
+                {totalTime}
+              </div>
+            </div>
+            <div data-export-card="inner" className="rounded-[18px] sm:rounded-[20px] border border-slate-200/80 bg-white/94 px-3 sm:px-4 py-3 sm:py-3.5">
+              <div className="text-[10px] sm:text-[11px] font-bold tracking-[0.2em] sm:tracking-[0.22em] text-neutral-500">
+                最强一天
+              </div>
+              <div className="mt-1.5 text-sm sm:text-base md:text-lg font-black text-neutral-800 tabular-nums">
+                {bestDayXp > 0 ? `${bestDayLabel} · ${bestDayXp}` : '待解锁'}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );

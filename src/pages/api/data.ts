@@ -2,13 +2,14 @@ import type { APIRoute } from 'astro';
 import type { CacheEntry, UserData } from '../../types';
 import { transformDuolingoData } from '../../services/duolingoService';
 import { getEnv, jsonResponse, createAuthChecker } from '../../utils/api-helpers';
+import { CACHE_TTL_MS } from '../../utils/constants';
+import { isFreshSameDayCache } from '../../utils/dateUtils';
 
 export const prerender = false;
 
 const DUOLINGO_BASE_URL = 'https://www.duolingo.com';
-const CACHE_TTL = 30 * 60 * 1000;
 const MAX_CACHE_SIZE = 100;
-const DEFAULT_TIMEOUT = 8000; // 增加默认超时时间
+const DEFAULT_TIMEOUT = 8000;
 
 const cache = new Map<string, CacheEntry<UserData>>();
 
@@ -19,14 +20,14 @@ async function fetchWithTimeout(url: string, headers: HeadersInit, timeoutMs = D
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, { headers, signal: controller.signal });
-    clearTimeout(timeoutId);
     if (!res.ok) {
       return { data: null, status: res.status };
     }
     return { data: await res.json(), status: res.status };
   } catch {
-    clearTimeout(timeoutId);
     return { data: null, status: 0 };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -44,8 +45,12 @@ export const GET: APIRoute = async ({ request }) => {
 
   const cacheKey = `user:${username}`;
   const cached = cache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return jsonResponse({ data: cached.data, cached: true }, 200, { cacheControl: 'private, max-age=60' });
+
+  // 检查缓存是否失效（过期或跨天）
+  if (cached) {
+    if (isFreshSameDayCache(cached.timestamp, CACHE_TTL_MS)) {
+      return jsonResponse({ data: cached.data, cached: true }, 200, { cacheControl: 'private, max-age=60' });
+    }
   }
 
   try {
@@ -55,8 +60,8 @@ export const GET: APIRoute = async ({ request }) => {
       'Authorization': `Bearer ${jwt}`
     };
 
-    // 1) 优先请求 V2（字段更全且稳定），失败再降级到 V1
-    const v2Url = `${DUOLINGO_BASE_URL}/2017-06-30/users?username=${username}`;
+    // 1) 先请求 V2 用户数据，拿到 userId 后再请求 xp_summaries
+    const v2Url = `${DUOLINGO_BASE_URL}/2017-06-30/users?username=${encodeURIComponent(username)}`;
     const v2Result = await fetchWithTimeout(v2Url, headers, 10000);
 
     // 检查是否为 JWT 过期错误
@@ -72,7 +77,7 @@ export const GET: APIRoute = async ({ request }) => {
 
     let userData = v2Data;
     if (!userData) {
-      const v1Url = `${DUOLINGO_BASE_URL}/users/${username}`;
+      const v1Url = `${DUOLINGO_BASE_URL}/users/${encodeURIComponent(username)}`;
       const v1Result = await fetchWithTimeout(v1Url, headers, 10000);
 
       if (v1Result.status === 401 || v1Result.status === 403) {
@@ -89,6 +94,7 @@ export const GET: APIRoute = async ({ request }) => {
       return jsonResponse({ error: 'Failed to fetch user data' }, 500);
     }
 
+    // 2) 获取 xp_summaries（获取完整历史数据）
     const userId = userData.id || userData.user_id || userData.tracking_properties?.user_id;
     if (userId) {
       const xpResult = await fetchWithTimeout(

@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
  * 恒定时间比较，防止时序攻击
  * 使用固定长度填充确保长度差异不泄露信息
  */
-export function timingSafeEqual(a: string, b: string): boolean {
+function timingSafeEqual(a: string, b: string): boolean {
   // 固定填充长度，防止长度泄露
   const maxLen = 128;
   const aPadded = a.padEnd(maxLen, '\0');

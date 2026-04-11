@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 
-export interface DailyXpData {
+interface DailyXpData {
   date: string;
   xp: number;
   time?: number;
 }
 
-export interface AchievementStats {
+interface AchievementStats {
   maxStreak: number;
   currentStreak: number;
   maxDailyXp: number;

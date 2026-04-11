@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAchievementStats } from '../../hooks/useAchievementStats';
 import { AchievementIconMap, type AchievementIconType } from './AchievementIcons';
 import { DuoColors, AchievementTiers } from '../../styles/duolingoColors';
+import { AwardCheckIcon, AwardLockIcon, TrophyBadgeIcon } from '../icons';
 
 interface Achievement {
   id: string;
@@ -15,6 +16,14 @@ interface Achievement {
 }
 
 type TierKey = Achievement['tier'];
+type AchievementStats = ReturnType<typeof useAchievementStats>;
+
+interface BadgeStatus extends Achievement {
+  current: number;
+  unlocked: boolean;
+  progress: number;
+  unlockedDate: string | null;
+}
 
 const ACHIEVEMENTS: Achievement[] = [
   { id: 'streak7', icon: 'flame', name: '初露锋芒', description: '连续学习 7 天', threshold: 7, unit: '天', category: 'streak', tier: 'bronze' },
@@ -56,6 +65,49 @@ function renderIcon(iconName: AchievementIconType, className?: string): React.Re
   return IconComponent ? <IconComponent className={className} /> : null;
 }
 
+function getAchievementProgress(
+  achievement: Achievement,
+  stats: AchievementStats
+): { current: number; unlockedDate: string | null } {
+  switch (achievement.category) {
+    case 'streak':
+      return {
+        current: stats.maxStreak,
+        unlockedDate: stats.streakMilestones[achievement.threshold] || null,
+      };
+    case 'dailyXp':
+      return {
+        current: stats.maxDailyXp,
+        unlockedDate: stats.dailyXpMilestones[achievement.threshold] || null,
+      };
+    case 'totalDays':
+      return {
+        current: stats.totalDays,
+        unlockedDate: stats.totalDaysMilestones[achievement.threshold] || null,
+      };
+    case 'totalXp':
+      return {
+        current: stats.totalXp,
+        unlockedDate: stats.totalXpMilestones[achievement.threshold] || null,
+      };
+  }
+}
+
+function buildBadgeStatus(stats: AchievementStats): BadgeStatus[] {
+  return ACHIEVEMENTS.map(achievement => {
+    const { current, unlockedDate } = getAchievementProgress(achievement, stats);
+    const unlocked = current >= achievement.threshold;
+
+    return {
+      ...achievement,
+      current,
+      unlocked,
+      progress: Math.min(current / achievement.threshold, 1),
+      unlockedDate,
+    };
+  });
+}
+
 export function AchievementsSection({ data }: AchievementsSectionProps): React.ReactElement {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [displayedId, setDisplayedId] = useState<string | null>(null);
@@ -63,41 +115,7 @@ export function AchievementsSection({ data }: AchievementsSectionProps): React.R
 
   const achievementStats = useAchievementStats(data);
 
-  const badgeStatus = useMemo(() => {
-    return ACHIEVEMENTS.map(achievement => {
-      let current = 0;
-      let unlockedDate: string | null = null;
-
-      switch (achievement.category) {
-        case 'streak':
-          current = achievementStats.maxStreak;
-          unlockedDate = achievementStats.streakMilestones[achievement.threshold] || null;
-          break;
-        case 'dailyXp':
-          current = achievementStats.maxDailyXp;
-          unlockedDate = achievementStats.dailyXpMilestones[achievement.threshold] || null;
-          break;
-        case 'totalDays':
-          current = achievementStats.totalDays;
-          unlockedDate = achievementStats.totalDaysMilestones[achievement.threshold] || null;
-          break;
-        case 'totalXp':
-          current = achievementStats.totalXp;
-          unlockedDate = achievementStats.totalXpMilestones[achievement.threshold] || null;
-          break;
-      }
-
-      const unlocked = current >= achievement.threshold;
-
-      return {
-        ...achievement,
-        current,
-        unlocked,
-        progress: Math.min(current / achievement.threshold, 1),
-        unlockedDate,
-      };
-    });
-  }, [achievementStats]);
+  const badgeStatus = useMemo(() => buildBadgeStatus(achievementStats), [achievementStats]);
 
   const totalUnlocked = badgeStatus.filter(b => b.unlocked).length;
   const totalBadges = badgeStatus.length;
@@ -120,13 +138,11 @@ export function AchievementsSection({ data }: AchievementsSectionProps): React.R
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl shadow-sm border-2 border-b-4 border-gray-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8">
-              {renderIcon('trophy')}
-            </div>
-            <h2 className="text-lg font-bold text-gray-800">奖项</h2>
+      <div className="bg-surface rounded-card shadow-card border border-neutral-100 overflow-hidden animate-fade-in-up">
+        <div className="px-5 py-4 border-b border-neutral-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <TrophyBadgeIcon className="w-5 h-5 text-yellow-500 shrink-0" />
+            <h2 className="text-lg font-bold text-neutral-800 leading-none">奖项</h2>
           </div>
           <div className="flex items-center gap-4">
             {/* 当前连续天数 */}
@@ -138,12 +154,12 @@ export function AchievementsSection({ data }: AchievementsSectionProps): React.R
             )}
 
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 font-medium">
+              <span className="text-sm text-neutral-500 font-medium">
                 {totalUnlocked}/{totalBadges}
               </span>
-              <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="w-20 h-2 bg-neutral-100 rounded-pill overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all duration-500"
+                  className="h-full rounded-pill transition-all duration-500"
                   style={{
                     width: `${(totalUnlocked / totalBadges) * 100}%`,
                     backgroundColor: DuoColors.featherGreen
@@ -155,9 +171,8 @@ export function AchievementsSection({ data }: AchievementsSectionProps): React.R
         </div>
 
         <div className="p-4 sm:p-5">
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4">
             {badgeStatus.map((badge) => {
-              const tierStyle = TIER_STYLES[badge.tier];
               const isSelected = selectedId === badge.id;
 
               return (
@@ -168,48 +183,44 @@ export function AchievementsSection({ data }: AchievementsSectionProps): React.R
                 >
                   <div
                     className={`
-                      relative w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20
+                      relative w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16
                       flex items-center justify-center transition-all duration-200
                       ${isSelected ? 'scale-110' : 'hover:scale-105'}
                     `}
                   >
                     <div
-                      className={`w-full h-full ${badge.unlocked ? '' : 'opacity-30 grayscale'}`}
+                      className={`w-9 h-9 sm:w-11 sm:h-11 lg:w-12 lg:h-12 ${badge.unlocked ? '' : 'opacity-30 grayscale'}`}
                     >
                       {renderIcon(badge.icon)}
                     </div>
 
                     {!badge.unlocked && (
                       <div
-                        className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+                        className="absolute -bottom-0.5 -right-0.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
                         style={{ backgroundColor: '#AFAFAF' }}
                       >
-                        <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/>
-                        </svg>
+                        <AwardLockIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
                       </div>
                     )}
 
                     {badge.unlocked && (
                       <div
-                        className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+                        className="absolute -bottom-0.5 -right-0.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
                         style={{ backgroundColor: DuoColors.featherGreen }}
                       >
-                        <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
-                        </svg>
+                        <AwardCheckIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
                       </div>
                     )}
                   </div>
 
                   <span
-                    className={`text-xs font-medium text-center leading-tight ${badge.unlocked ? 'text-gray-700' : 'text-gray-400'}`}
+                    className={`text-[10px] sm:text-xs font-medium text-center leading-tight ${badge.unlocked ? 'text-neutral-800' : 'text-neutral-400'}`}
                   >
                     {badge.name}
                   </span>
 
                   {!badge.unlocked && (
-                    <span className="text-[10px] text-gray-400">
+                    <span className="text-[9px] sm:text-[10px] text-neutral-400">
                       {Math.round(badge.progress * 100)}%
                     </span>
                   )}
@@ -227,7 +238,7 @@ export function AchievementsSection({ data }: AchievementsSectionProps): React.R
         >
           <div className="overflow-hidden">
              {displayedBadge && (
-              <div className="p-4 sm:p-5 bg-gray-50/80">
+              <div className="p-4 sm:p-5 bg-surface-background">
               <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                 <div className="flex items-start gap-4 flex-1 min-w-0">
                   <div
@@ -250,7 +261,7 @@ export function AchievementsSection({ data }: AchievementsSectionProps): React.R
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-gray-800">{displayedBadge.name}</h3>
+                      <h3 className="font-bold text-neutral-800">{displayedBadge.name}</h3>
                       <span
                         className="text-xs px-2 py-0.5 rounded-full text-white"
                         style={{ backgroundColor: TIER_STYLES[displayedBadge.tier].bg }}
@@ -262,27 +273,25 @@ export function AchievementsSection({ data }: AchievementsSectionProps): React.R
                           className="text-xs font-medium flex items-center gap-0.5"
                           style={{ color: DuoColors.featherGreen }}
                         >
-                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
-                          </svg>
+                          <AwardCheckIcon className="w-3 h-3" />
                           已解锁
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500 mt-0.5">{displayedBadge.description}</p>
+                    <p className="text-sm text-neutral-500 mt-0.5">{displayedBadge.description}</p>
                   </div>
                 </div>
 
                 <div className="sm:w-64 flex-shrink-0">
                   <div className="flex items-center justify-between text-sm mb-1.5">
-                    <span className="text-gray-500">进度</span>
-                    <span className="font-medium text-gray-700">
+                    <span className="text-neutral-500">进度</span>
+                    <span className="font-medium text-neutral-800">
                       {displayedBadge.current.toLocaleString()} / {displayedBadge.threshold.toLocaleString()} {displayedBadge.unit}
                     </span>
                   </div>
-                  <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-2.5 bg-neutral-100 rounded-pill overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all duration-500"
+                      className="h-full rounded-pill transition-all duration-500"
                       style={{
                         width: `${Math.min(displayedBadge.progress * 100, 100)}%`,
                         backgroundColor: displayedBadge.unlocked
@@ -293,14 +302,14 @@ export function AchievementsSection({ data }: AchievementsSectionProps): React.R
                   </div>
 
                   {displayedBadge.unlocked && displayedBadge.unlockedDate && (
-                    <div className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                    <div className="text-xs text-neutral-400 mt-2 flex items-center gap-1">
                       <div className="w-4 h-4">{renderIcon('calendar')}</div>
                       <span>达成于 {displayedBadge.unlockedDate}</span>
                     </div>
                   )}
 
                   {!displayedBadge.unlocked && (
-                    <div className="text-xs text-gray-400 mt-2">
+                    <div className="text-xs text-neutral-400 mt-2">
                       还差 {(displayedBadge.threshold - displayedBadge.current).toLocaleString()} {displayedBadge.unit}
                     </div>
                   )}
@@ -314,5 +323,3 @@ export function AchievementsSection({ data }: AchievementsSectionProps): React.R
     </div>
   );
 };
-
-export default AchievementsSection;

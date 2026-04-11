@@ -1,20 +1,20 @@
 import React from 'react';
+import { ShareIcon, RefreshIcon } from '../icons';
+import { CACHE_TTL_MS } from '../../utils/constants';
 
 interface NavbarProps {
   loading: boolean;
   lastUpdated: number | null;
-  isStale?: boolean; // 数据是否可能过期（来自缓存）
   onRefresh: () => void;
   onShare?: () => void;
 }
 
-function getUpdateStatusText(loading: boolean, lastUpdated: number | null, isStale?: boolean): string {
+function getUpdateStatusText(loading: boolean, lastUpdated: number | null, now: number): string {
   if (loading) return '正在更新…';
   if (lastUpdated) {
     const timeStr = new Date(lastUpdated).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-    // 检查数据是否超过 30 分钟
-    const isOld = Date.now() - lastUpdated > 30 * 60 * 1000;
-    if (isStale || isOld) {
+    const isOld = now - lastUpdated > CACHE_TTL_MS;
+    if (isOld) {
       return `缓存数据 (${timeStr})`;
     }
     return `更新于 ${timeStr}`;
@@ -22,47 +22,47 @@ function getUpdateStatusText(loading: boolean, lastUpdated: number | null, isSta
   return '尚未更新';
 }
 
-export function Navbar({ loading, lastUpdated, isStale, onRefresh, onShare }: NavbarProps): React.ReactElement {
+export const Navbar = React.memo(function Navbar({ loading, lastUpdated, onRefresh, onShare }: NavbarProps): React.ReactElement {
+  const now = Date.now();
+  const isStale = Boolean(lastUpdated && now - lastUpdated > CACHE_TTL_MS);
+
   return (
-    <nav className="bg-white border-b-2 border-gray-200 sticky top-0 z-50" aria-label="主导航">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+    <nav className="bg-surface border-b border-neutral-100 sticky top-0 z-50" aria-label="主导航">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+        <div className="flex justify-between h-14 sm:h-16">
           <div className="flex items-center gap-2">
-            <img src="/favicon.svg" alt="Duo Owl" className="w-8 h-8 rounded-lg" />
-            <span className="font-extrabold text-2xl text-[#58cc02] tracking-tight hidden sm:block">DuoDash</span>
+            <img src="/favicon.svg" alt="Duo Owl" className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg" />
+            <span className="font-extrabold text-xl sm:text-2xl text-[#58cc02] tracking-tight hidden xs:block">DuoDash</span>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex flex-col items-end leading-tight">
-              <span className={`text-xs font-semibold ${isStale ? 'text-amber-600' : 'text-gray-600'}`} aria-live="polite">
-                {getUpdateStatusText(loading, lastUpdated, isStale)}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="hidden md:flex flex-col items-end leading-tight">
+              <span className={`text-xs font-semibold ${isStale ? 'text-amber-500' : 'text-neutral-500'}`} aria-live="polite">
+                {getUpdateStatusText(loading, lastUpdated, now)}
               </span>
             </div>
             {onShare && (
               <button
                 onClick={onShare}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 transition-colors"
-                title="分享卡片"
-                aria-label="分享卡片"
+                className="surface-button px-2.5 py-2 sm:px-3 sm:py-2 min-h-[44px] sm:min-h-0"
+                aria-label="打开分享卡片对话框"
               >
-                <span className="text-base" role="img" aria-hidden="true">📤</span>
-                <span className="hidden sm:inline font-semibold text-gray-700 text-sm">分享</span>
+                <ShareIcon className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-800" aria-hidden="true" />
+                <span className="hidden md:inline font-semibold text-neutral-800 text-sm">分享</span>
               </button>
             )}
             <button
               onClick={onRefresh}
               disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="surface-button px-2.5 py-2 sm:px-3 sm:py-2 min-h-[44px] sm:min-h-0 disabled:cursor-not-allowed disabled:opacity-50"
               title="刷新数据"
               aria-label={loading ? '正在刷新数据' : '刷新数据'}
             >
-              <span className={`text-base ${loading ? 'animate-spin' : ''}`} role="img" aria-hidden="true">🔄</span>
-              <span className="hidden sm:inline font-semibold text-gray-700 text-sm">刷新</span>
+              <RefreshIcon className={`w-4 h-4 sm:w-5 sm:h-5 text-neutral-800 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden md:inline font-semibold text-neutral-800 text-sm">刷新</span>
             </button>
           </div>
         </div>
       </div>
     </nav>
   );
-}
-
-export default Navbar;
+});

@@ -1,54 +1,32 @@
 import React from 'react';
-import { StatCardColors } from '../../styles/duolingoColors';
-
-const ICON_COLOR_MAP: Record<string, string> = {
-  '⚡': StatCardColors.totalXp,
-  '📅': StatCardColors.accountAge,
-  '📚': StatCardColors.courses,
-  '⏱️': StatCardColors.learningTime,
-  '🔥': StatCardColors.streak,
-  '💎': StatCardColors.gems,
-};
+import type { ReactNode } from 'react';
 
 interface StatCardProps {
-  icon: string;
+  icon: ReactNode;
   value: string | number;
   label: string;
   colorClass?: string;
-  color?: string;
-  seq: number;
-  isLargeText?: boolean;
+  iconBgClass?: string;
 }
 
-export function StatCard({
+export const StatCard = React.memo(function StatCard({
   icon,
   value,
   label,
   colorClass,
-  color,
-  seq,
-  isLargeText = true,
+  iconBgClass = 'bg-neutral-100',
 }: StatCardProps): React.ReactElement {
-  const iconColor = ICON_COLOR_MAP[icon];
-  const valueColor = color || iconColor;
-
   return (
-    <div className={`bg-white rounded-2xl p-4 shadow-sm border-2 border-b-4 border-gray-200 animate-seq seq-${seq}`}>
-      <div
-        className="text-2xl mb-1"
-        style={iconColor ? { filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' } : undefined}
-      >
+    <div className="panel-card animate-fade-in-up p-3 sm:p-4 lg:p-5">
+      <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-pill flex items-center justify-center mb-2 sm:mb-3 lg:mb-4 shrink-0 ${iconBgClass}`}>
         {icon}
       </div>
       <div
-        className={`${isLargeText ? 'text-2xl' : 'text-lg'} font-extrabold ${!valueColor ? colorClass : ''}`}
-        style={valueColor ? { color: valueColor } : undefined}
+        className={`text-lg sm:text-xl lg:text-2xl font-black mb-1 tabular-nums ${colorClass ?? ''}`}
       >
         {value}
       </div>
-      <div className="text-xs text-gray-500 font-bold">{label}</div>
+      <div className="text-[9px] sm:text-[10px] lg:text-xs text-neutral-500 font-bold uppercase tracking-wide">{label}</div>
     </div>
   );
-}
-
-export default StatCard;
+});
