@@ -2,6 +2,7 @@ import dns from 'node:dns';
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import vercel from '@astrojs/vercel';
+import netlify from '@astrojs/netlify';
 
 dns.setDefaultResultOrder('verbatim');
 const DEFAULT_DEV_HOST = 'localhost';
@@ -20,14 +21,21 @@ function getDevServerConfig(env = process.env) {
 
 const devServerConfig = getDevServerConfig();
 
-export default defineConfig({
-  site: 'https://duodash.vercel.app',
-  output: 'server',
-  adapter: vercel({
+function getAdapter(env = process.env) {
+  if (env.NETLIFY) {
+    return netlify();
+  }
+
+  return vercel({
     webAnalytics: {
       enabled: false
     }
-  }),
+  });
+}
+
+export default defineConfig({
+  output: 'server',
+  adapter: getAdapter(),
   devToolbar: {
     enabled: false
   },
