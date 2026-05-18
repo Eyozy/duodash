@@ -29,7 +29,7 @@ function TimeHistoryChart({ data }: TimeHistoryChartProps): React.ReactElement {
 
   return (
     <div className="w-full">
-      <div ref={containerRef} className="w-full h-32 sm:h-40">
+      <div ref={containerRef} className="chart-shell w-full h-32 sm:h-40">
         {dimensions.width > 0 && dimensions.height > 0 && (
           <AreaChart width={dimensions.width} height={dimensions.height} data={data} margin={CHART_MARGIN}>
             <defs>

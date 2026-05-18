@@ -1,5 +1,5 @@
 import type { DuolingoRawUser } from "../types";
-import { toLocalDateKey, parseSummaryDateKey, getMonday } from "../utils/dateUtils";
+import { toLocalDateKey, parseSummaryDateKey, getMonday, formatMonthDayInTimeZone, resolveTimeZone } from "../utils/dateUtils";
 
 interface HistoryData {
   dailyXpHistory: { date: string; xp: number }[];
@@ -16,13 +16,14 @@ function addToMap(map: Map<string, number>, key: string, value: number): void {
 /**
  * 构建历史数据（日、周、年）
  */
-export function buildHistoryData(rawData: DuolingoRawUser): HistoryData {
+export function buildHistoryData(rawData: DuolingoRawUser, timeZone?: string): HistoryData {
+  const resolvedTimeZone = resolveTimeZone(timeZone);
   const xpByDate = new Map<string, number>();
   const timeByDate = new Map<string, number>();
 
   // 处理日历事件
   function addCalendarEvent(event: { datetime: number; improvement?: number }): void {
-    const dateKey = toLocalDateKey(new Date(event.datetime));
+    const dateKey = toLocalDateKey(new Date(event.datetime), resolvedTimeZone);
     const improvement = event.improvement || 0;
     addToMap(xpByDate, dateKey, improvement);
     addToMap(timeByDate, dateKey, Math.ceil((improvement || 10) / 3));
@@ -57,8 +58,8 @@ export function buildHistoryData(rawData: DuolingoRawUser): HistoryData {
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
-    const dateKey = toLocalDateKey(d);
-    const dayLabel = d.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+    const dateKey = toLocalDateKey(d, resolvedTimeZone);
+    const dayLabel = formatMonthDayInTimeZone(d, resolvedTimeZone);
     dailyXpHistory.push({ date: dayLabel, xp: xpByDate.get(dateKey) || 0 });
     dailyTimeHistory.push({ date: dayLabel, time: timeByDate.get(dateKey) || 0 });
   }
@@ -66,14 +67,14 @@ export function buildHistoryData(rawData: DuolingoRawUser): HistoryData {
   // 自然周数据（用于分享卡片，周一到周日）
   const weeklyXpHistory: { date: string; xp: number; isFuture: boolean }[] = [];
   const weeklyTimeHistory: { date: string; time: number; isFuture: boolean }[] = [];
-  const monday = getMonday(today);
-  const todayDateKey = toLocalDateKey(today);
+  const monday = getMonday(today, resolvedTimeZone);
+  const todayDateKey = toLocalDateKey(today, resolvedTimeZone);
 
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    const dateKey = toLocalDateKey(d);
-    const dayLabel = d.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+    const dateKey = toLocalDateKey(d, resolvedTimeZone);
+    const dayLabel = formatMonthDayInTimeZone(d, resolvedTimeZone);
     const isFuture = dateKey > todayDateKey;
 
     weeklyXpHistory.push({

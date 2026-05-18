@@ -105,6 +105,20 @@ img {
   border-radius: var(--radius-card);
 }
 
+.chart-shell :where(svg, svg *, .recharts-wrapper, .recharts-wrapper *) {
+  outline: none;
+}
+
+.chart-shell :where([tabindex]):focus {
+  outline: none;
+}
+
+.chart-shell :where([tabindex]):focus-visible {
+  outline: 2px solid rgba(28, 176, 246, 0.32);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
 .panel-header {
   display: flex;
   align-items: center;

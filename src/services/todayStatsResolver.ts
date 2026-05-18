@@ -1,5 +1,5 @@
 import type { DuolingoRawUser } from "../types";
-import { toLocalDateKey, getStartOfDayInTimezone, parseSummaryDateKey, MS_PER_DAY } from "../utils/dateUtils";
+import { toLocalDateKey, getStartOfDayInTimezone, parseSummaryDateKey, MS_PER_DAY, resolveTimeZone } from "../utils/dateUtils";
 
 interface TodayStats {
   xpToday: number;
@@ -52,23 +52,25 @@ function resolveStreakExtendedTime(
  */
 export function resolveTodayStats(
   rawData: DuolingoRawUser,
-  xpByDate: Map<string, number>
+  xpByDate: Map<string, number>,
+  timeZone?: string
 ): TodayStats {
+  const resolvedTimeZone = resolveTimeZone(timeZone);
   let xpToday = 0;
   let lessonsToday = 0;
   const streakExtendedToday = rawData.streak_extended_today ?? rawData.streakExtendedToday ?? false;
 
   const now = new Date();
-  const localTodayStart = getStartOfDayInTimezone(now);
+  const localTodayStart = getStartOfDayInTimezone(now, resolvedTimeZone);
   const localTodayEnd = localTodayStart + MS_PER_DAY;
-  const localTodayDateKey = toLocalDateKey(now);
+  const localTodayDateKey = toLocalDateKey(now, resolvedTimeZone);
 
   const streakExtendedTime = resolveStreakExtendedTime(streakExtendedToday, rawData, localTodayStart, localTodayEnd);
 
   // 优先从 xpSummaries 获取今日数据
   if (rawData._xpSummaries?.length) {
     const todaySummary = rawData._xpSummaries.find((s) =>
-      parseSummaryDateKey(s.date) === localTodayDateKey
+      parseSummaryDateKey(s.date, resolvedTimeZone) === localTodayDateKey
     );
     if (todaySummary) {
       xpToday = todaySummary.gainedXp ?? todaySummary.gained_xp ?? 0;

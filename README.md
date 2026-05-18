@@ -237,11 +237,15 @@ DuoDash 通过调用 Duolingo 官方提供的非官方接口获取数据：
 
 ### 日期或热力图显示不准确？
 
-仪表盘会自动根据你的浏览器时区转换 Duolingo 的 UTC 数据。如果你发现日期偏移，可以按以下步骤验证本地时区：
+仪表盘会将浏览器时区通过 `x-user-timezone` 传给服务端，再按该时区计算最近 7 天、今日数据和本周数据。
 
-1. 打开浏览器开发者工具 (F12) → **Console**
-2. 输入命令并回车：`new Intl.DateTimeFormat().resolvedOptions().timeZone`
-3. 确认返回的值是否匹配你当前所在的地理位置。
+如果你发现日期偏移，可以先在浏览器控制台确认当前时区：
+
+```js
+new Intl.DateTimeFormat().resolvedOptions().timeZone
+```
+
+如果返回值和你当前所在地区不一致，页面上的“今天”和“最近 7 天”也会随之偏移。
 
 ### AI 点评不显示
 

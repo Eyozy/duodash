@@ -3,7 +3,7 @@ import type { CacheEntry, UserData } from '../../types';
 import { transformDuolingoData } from '../../services/duolingoService';
 import { getEnv, jsonResponse, createAuthChecker } from '../../utils/api-helpers';
 import { CACHE_TTL_MS } from '../../utils/constants';
-import { isFreshSameDayCache } from '../../utils/dateUtils';
+import { isFreshSameDayCache, resolveTimeZone } from '../../utils/dateUtils';
 
 export const prerender = false;
 
@@ -36,6 +36,7 @@ export const GET: APIRoute = async ({ request }) => {
     return jsonResponse({ error: 'Unauthorized' }, 401);
   }
 
+  const requestedTimeZone = resolveTimeZone(request.headers.get('x-user-timezone') || undefined);
   const username = getEnv('DUOLINGO_USERNAME');
   const jwt = getEnv('DUOLINGO_JWT');
 
@@ -43,12 +44,12 @@ export const GET: APIRoute = async ({ request }) => {
     return jsonResponse({ error: 'Not configured' }, 400);
   }
 
-  const cacheKey = `user:${username}`;
+  const cacheKey = `user:${username}:tz:${requestedTimeZone}`;
   const cached = cache.get(cacheKey);
 
   // 检查缓存是否失效（过期或跨天）
   if (cached) {
-    if (isFreshSameDayCache(cached.timestamp, CACHE_TTL_MS)) {
+    if (isFreshSameDayCache(cached.timestamp, CACHE_TTL_MS, Date.now(), requestedTimeZone)) {
       return jsonResponse({ data: cached.data, cached: true }, 200, { cacheControl: 'private, max-age=60' });
     }
   }
@@ -113,7 +114,7 @@ export const GET: APIRoute = async ({ request }) => {
       return jsonResponse({ error: 'Received invalid user data from Duolingo' }, 502);
     }
 
-    const transformed = transformDuolingoData(userData);
+    const transformed = transformDuolingoData(userData, requestedTimeZone);
 
     if (cache.size >= MAX_CACHE_SIZE) {
       const oldestKey = cache.keys().next().value;

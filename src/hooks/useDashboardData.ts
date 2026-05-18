@@ -8,8 +8,19 @@ interface DashboardDataResponse {
   error?: string;
 }
 
+function getBrowserTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return undefined;
+  }
+}
+
 async function fetchDashboardData(): Promise<{ status: number; payload: DashboardDataResponse }> {
-  const response = await fetch('/api/data');
+  const timeZone = getBrowserTimeZone();
+  const response = await fetch('/api/data', {
+    headers: timeZone ? { 'x-user-timezone': timeZone } : undefined
+  });
   const payload = await response.json() as DashboardDataResponse;
   return { status: response.status, payload };
 }

@@ -1,5 +1,5 @@
 import type { UserData, DuolingoRawUser } from "../types";
-import { parseSummaryDateKey, calcDaysSince } from "../utils/dateUtils";
+import { parseSummaryDateKey, calcDaysSince, resolveTimeZone } from "../utils/dateUtils";
 import { resolveCourses, resolveLearningLanguage, resolveTierIndex, parseCreationDate, resolveIsPlus, resolveTotalXp } from "./dataResolvers";
 import { buildHistoryData, calculateTotalLearningTime } from "./historyBuilder";
 import { resolveTodayStats } from "./todayStatsResolver";
@@ -9,10 +9,11 @@ const LEAGUE_TIERS = [
   "祖母绿", "紫水晶", "珍珠", "黑曜石", "钻石"
 ];
 
-export function transformDuolingoData(rawData: DuolingoRawUser): UserData {
+export function transformDuolingoData(rawData: DuolingoRawUser, timeZone?: string): UserData {
   if (!rawData || typeof rawData !== 'object') {
     throw new TypeError('transformDuolingoData: 输入必须是有效的用户数据对象');
   }
+  const resolvedTimeZone = resolveTimeZone(timeZone);
 
   const streak = rawData.site_streak ?? rawData.streak ?? 0;
   const gems = rawData.gemsTotalCount || rawData.totalGems || rawData.gems || rawData.tracking_properties?.gems || rawData.lingots || rawData.rupees || 0;
@@ -29,7 +30,7 @@ export function transformDuolingoData(rawData: DuolingoRawUser): UserData {
     weeklyXpHistory,
     weeklyTimeHistory,
     yearlyXpHistory
-  } = buildHistoryData(rawData);
+  } = buildHistoryData(rawData, resolvedTimeZone);
 
   const tierIndex = resolveTierIndex(rawData);
   const leagueName = (tierIndex >= 0 && tierIndex < LEAGUE_TIERS.length)
@@ -38,7 +39,8 @@ export function transformDuolingoData(rawData: DuolingoRawUser): UserData {
   const { dateStr: creationDateStr, ageDays: accountAgeDays } = parseCreationDate(
     creationTs,
     rawData.created,
-    calcDaysSince
+    calcDaysSince,
+    resolvedTimeZone
   );
 
   const isPlus = resolveIsPlus(rawData);
@@ -47,7 +49,7 @@ export function transformDuolingoData(rawData: DuolingoRawUser): UserData {
   const xpByDate = new Map<string, number>();
   if (rawData._xpSummaries?.length) {
     for (const summary of rawData._xpSummaries) {
-      const dateKey = parseSummaryDateKey(summary.date);
+      const dateKey = parseSummaryDateKey(summary.date, resolvedTimeZone);
       if (dateKey) {
         const gainedXp = summary.gainedXp ?? summary.gained_xp ?? 0;
         xpByDate.set(dateKey, (xpByDate.get(dateKey) || 0) + gainedXp);
@@ -55,7 +57,7 @@ export function transformDuolingoData(rawData: DuolingoRawUser): UserData {
     }
   }
 
-  const { xpToday, lessonsToday, streakExtendedToday, streakExtendedTime } = resolveTodayStats(rawData, xpByDate);
+  const { xpToday, lessonsToday, streakExtendedToday, streakExtendedTime } = resolveTodayStats(rawData, xpByDate, resolvedTimeZone);
 
   return {
     streak,

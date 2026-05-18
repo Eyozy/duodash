@@ -3,6 +3,19 @@ const DEFAULT_TIMEZONE = typeof Intl !== 'undefined'
   ? Intl.DateTimeFormat().resolvedOptions().timeZone
   : 'Asia/Shanghai';
 
+export function resolveTimeZone(timeZone?: string): string {
+  if (!timeZone) {
+    return DEFAULT_TIMEZONE;
+  }
+
+  try {
+    Intl.DateTimeFormat('en-US', { timeZone }).format(new Date());
+    return timeZone;
+  } catch {
+    return DEFAULT_TIMEZONE;
+  }
+}
+
 /**
  * 获取日期格式化器
  */
@@ -20,8 +33,9 @@ function getDateFormatter(timeZone: string = DEFAULT_TIMEZONE): Intl.DateTimeFor
  * 使用用户浏览器的本地时区
  */
 export function toLocalDateKey(date: Date, timeZone: string = DEFAULT_TIMEZONE): string {
+  const resolvedTimeZone = resolveTimeZone(timeZone);
   try {
-    const formatter = getDateFormatter(timeZone);
+    const formatter = getDateFormatter(resolvedTimeZone);
     return formatter.format(date);
   } catch {
     const year = date.getFullYear();
@@ -35,9 +49,10 @@ export function toLocalDateKey(date: Date, timeZone: string = DEFAULT_TIMEZONE):
  * 获取指定时区的当天开始时间戳（毫秒）
  */
 export function getStartOfDayInTimezone(date: Date, timeZone: string = DEFAULT_TIMEZONE): number {
-  const dateKey = toLocalDateKey(date, timeZone);
+  const resolvedTimeZone = resolveTimeZone(timeZone);
+  const dateKey = toLocalDateKey(date, resolvedTimeZone);
   const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
+    timeZone: resolvedTimeZone,
     timeZoneName: 'shortOffset'
   });
   const parts = formatter.formatToParts(date);
@@ -57,22 +72,28 @@ function isSameLocalDay(
   return toLocalDateKey(new Date(firstTimestamp), timeZone) === toLocalDateKey(new Date(secondTimestamp), timeZone);
 }
 
-export function isFreshSameDayCache(timestamp: number, ttlMs: number, now: number = Date.now()): boolean {
-  return now - timestamp < ttlMs && isSameLocalDay(timestamp, now);
+export function isFreshSameDayCache(
+  timestamp: number,
+  ttlMs: number,
+  now: number = Date.now(),
+  timeZone: string = DEFAULT_TIMEZONE
+): boolean {
+  return now - timestamp < ttlMs && isSameLocalDay(timestamp, now, timeZone);
 }
 
 /**
  * 将 xpSummary 的日期字段解析为日期键
  */
-export function parseSummaryDateKey(date: number | string): string | null {
+export function parseSummaryDateKey(date: number | string, timeZone: string = DEFAULT_TIMEZONE): string | null {
+  const resolvedTimeZone = resolveTimeZone(timeZone);
   if (typeof date === 'number') {
     const d = new Date(date * 1000);
     if (isNaN(d.getTime())) return null;
-    return toLocalDateKey(d);
+    return toLocalDateKey(d, resolvedTimeZone);
   }
   const utcDate = new Date(String(date).replace(/\//g, '-') + 'T00:00:00Z');
   if (isNaN(utcDate.getTime())) return null;
-  return toLocalDateKey(utcDate);
+  return toLocalDateKey(utcDate, resolvedTimeZone);
 }
 
 /**
@@ -88,12 +109,13 @@ function getStartOfDay(date: Date): Date {
  * 获取指定日期所在自然周的周一
  */
 export function getMonday(date: Date, timeZone: string = DEFAULT_TIMEZONE): Date {
+  const resolvedTimeZone = resolveTimeZone(timeZone);
   const formatter = new Intl.DateTimeFormat('en-CA', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     weekday: 'short',
-    timeZone
+    timeZone: resolvedTimeZone
   });
 
   const parts = formatter.formatToParts(date);
@@ -115,8 +137,8 @@ export function getMonday(date: Date, timeZone: string = DEFAULT_TIMEZONE): Date
 /**
  * 计算从指定日期到今天的天数
  */
-export function calcDaysSince(createdAt: Date): number {
-  const diffMs = getStartOfDay(new Date()).getTime() - getStartOfDay(createdAt).getTime();
+export function calcDaysSince(createdAt: Date, timeZone: string = DEFAULT_TIMEZONE): number {
+  const diffMs = getStartOfDayInTimezone(new Date(), timeZone) - getStartOfDayInTimezone(createdAt, timeZone);
   return Math.max(0, Math.floor(diffMs / MS_PER_DAY));
 }
 
@@ -127,8 +149,25 @@ export function formatMonthDay(date: Date): string {
   return date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
 }
 
+export function formatMonthDayInTimeZone(date: Date, timeZone: string = DEFAULT_TIMEZONE): string {
+  return date.toLocaleDateString('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    timeZone: resolveTimeZone(timeZone)
+  });
+}
+
+export function formatFullDateInTimeZone(date: Date, timeZone: string = DEFAULT_TIMEZONE): string {
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: resolveTimeZone(timeZone)
+  });
+}
+
 /**
- * 格式化时长（分钟）为"X小时 Y分钟"格式
+ * 格式化时长（分钟）为"X 小时 Y 分钟"格式
  */
 export function formatDuration(totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60);

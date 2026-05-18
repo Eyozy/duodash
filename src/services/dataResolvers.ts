@@ -110,15 +110,16 @@ export function resolveTierIndex(rawData: DuolingoRawUser): number {
 export function parseCreationDate(
   creationTs: number | undefined,
   created: string | undefined,
-  calcDaysSince: (date: Date) => number
+  calcDaysSince: (date: Date, timeZone?: string) => number,
+  timeZone?: string
 ): { dateStr: string; ageDays: number } {
   if (creationTs) {
     const ts = creationTs < 10000000000 ? creationTs * 1000 : creationTs;
     const cDate = new Date(ts);
     if (!isNaN(cDate.getTime())) {
       return {
-        dateStr: cDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }),
-        ageDays: calcDaysSince(cDate)
+        dateStr: cDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone }),
+        ageDays: calcDaysSince(cDate, timeZone)
       };
     }
   }
@@ -127,8 +128,8 @@ export function parseCreationDate(
     const cDate = new Date(created);
     if (!isNaN(cDate.getTime())) {
       return {
-        dateStr: cDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }),
-        ageDays: calcDaysSince(cDate)
+        dateStr: cDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone }),
+        ageDays: calcDaysSince(cDate, timeZone)
       };
     }
   }
