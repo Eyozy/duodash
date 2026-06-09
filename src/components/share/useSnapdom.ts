@@ -23,7 +23,7 @@ export function useSnapdom() {
 
       const result = await snapdom(exportRoot, {
         scale,
-        backgroundColor: '#f8fafc',
+        backgroundColor: '#ffffff',
         embedFonts: true,
         outerTransforms: true,
         outerShadows: false,
@@ -56,33 +56,52 @@ function createExportRoot(element: HTMLElement): HTMLDivElement {
   const clone = element.cloneNode(true);
 
   exportRoot.style.position = 'fixed';
-  exportRoot.style.left = '-10000px';
+  exportRoot.style.left = '-500px';
   exportRoot.style.top = '0';
+  exportRoot.style.zIndex = '-9999';
+  exportRoot.style.pointerEvents = 'none';
   exportRoot.style.padding = '0';
   exportRoot.style.background = 'transparent';
   exportRoot.style.borderRadius = '0';
-  exportRoot.style.overflow = 'visible';
-  exportRoot.style.width = `${element.offsetWidth}px`;
-  exportRoot.style.height = `${element.offsetHeight}px`;
+  exportRoot.style.overflow = 'hidden';
+
+  // Always set dimensions to the high-resolution desktop card size (344px by 430px)
+  exportRoot.style.width = '344px';
+  exportRoot.style.height = '430px';
+
   if (clone instanceof HTMLElement) {
     clone.style.margin = '0';
-    clone.style.width = '100%';
-    clone.style.height = '100%';
+    clone.style.position = 'absolute';
+    clone.style.top = '-1px';
+    clone.style.left = '-1px';
+    clone.style.width = '346px';
+    clone.style.height = '432px';
     clone.style.maxWidth = 'none';
     clone.style.borderRadius = '0';
-    clone.style.boxShadow = 'none';
+    clone.style.setProperty('box-shadow', 'none', 'important');
+    clone.style.setProperty('border', 'none', 'important');
+    clone.style.setProperty('border-width', '0px', 'important');
+    clone.style.setProperty('outline', 'none', 'important');
+    clone.classList.remove('border', 'border-slate-200');
   }
-  exportRoot.appendChild(clone);
-  document.body.appendChild(exportRoot);
-
   if (clone instanceof HTMLElement) {
     stripExportDecoration(clone);
   }
+  exportRoot.appendChild(clone);
+  document.body.appendChild(exportRoot);
 
   return exportRoot;
 }
 
 function stripExportDecoration(root: HTMLElement): void {
+  // Ensure the root card itself has border and shadow stripped
+  root.style.setProperty('border', 'none', 'important');
+  root.style.setProperty('border-width', '0px', 'important');
+  root.style.setProperty('outline', 'none', 'important');
+  root.style.setProperty('box-shadow', 'none', 'important');
+  root.style.borderRadius = '0';
+  root.classList.remove('border', 'border-slate-200');
+
   const panelCards = root.querySelectorAll<HTMLElement>('.panel-card');
   for (const node of panelCards) {
     node.style.borderRadius = '0';
@@ -92,7 +111,6 @@ function stripExportDecoration(root: HTMLElement): void {
 
   const innerCards = root.querySelectorAll<HTMLElement>('[data-export-card="inner"]');
   for (const node of innerCards) {
-    node.style.borderRadius = '18px';
     node.style.boxShadow = 'none';
     node.style.border = '1px solid rgba(148, 163, 184, 0.18)';
   }
