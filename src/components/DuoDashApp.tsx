@@ -122,9 +122,9 @@ function DuoDashApp(): React.ReactElement {
     <div className="min-h-screen overflow-x-hidden bg-surface-background">
       <Navbar loading={loading} lastUpdated={lastUpdated} onRefresh={refresh} onShare={() => setShowShareModal(true)} />
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pb-6 sm:pb-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pb-2 sm:pb-3">
         <div className="max-w-7xl mx-auto rounded-3xl bg-surface-background">
-          <div className="px-0 py-2 sm:px-2 sm:py-4 md:px-4 lg:px-6">
+          <div className="px-0 pt-2 pb-1 sm:px-2 sm:pt-4 sm:pb-2 md:px-4 lg:px-6">
             <PageHeader userData={userData} viewData={viewData} />
 
             <div className="space-y-3 sm:space-y-4">

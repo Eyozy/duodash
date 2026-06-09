@@ -17,12 +17,12 @@ export const StatCard = React.memo(function StatCard({
   iconBgClass = 'bg-neutral-100',
 }: StatCardProps): React.ReactElement {
   return (
-    <div className="panel-card animate-fade-in-up p-3 sm:p-4 lg:p-5">
+    <div className="panel-card animate-fade-in-up p-2.5 min-[400px]:p-3 sm:p-4 lg:p-5">
       <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-pill flex items-center justify-center mb-2 sm:mb-3 lg:mb-4 shrink-0 ${iconBgClass}`}>
         {icon}
       </div>
       <div
-        className={`text-lg sm:text-xl lg:text-2xl font-black mb-1 tabular-nums ${colorClass ?? ''}`}
+        className={`text-base max-[425px]:text-sm max-[360px]:text-xs sm:text-xl lg:text-2xl font-black mb-1 tabular-nums ${colorClass ?? ''}`}
       >
         {value}
       </div>
