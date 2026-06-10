@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 
 interface DailyXpData {
   date: string;
@@ -28,23 +28,6 @@ const MILESTONES = {
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const MAX_STREAK_CHECK = 3650;
 
-// 日期解析缓存，避免重复解析相同日期字符串
-const dateTimestampCache = new Map<string, number>();
-
-function getCachedTimestamp(dateStr: string): number {
-  let ts = dateTimestampCache.get(dateStr);
-  if (ts === undefined) {
-    ts = new Date(dateStr).getTime();
-    // 限制缓存大小
-    if (dateTimestampCache.size > 500) {
-      const firstKey = dateTimestampCache.keys().next().value;
-      if (firstKey) dateTimestampCache.delete(firstKey);
-    }
-    dateTimestampCache.set(dateStr, ts);
-  }
-  return ts;
-}
-
 function formatDateString(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -68,8 +51,23 @@ function recordMilestone(
 }
 
 export function useAchievementStats(data: DailyXpData[]): AchievementStats {
+  const dateCacheRef = useRef<Map<string, number>>(new Map());
+
   return useMemo(() => {
-    // 防御性检查：确保 data 是有效数组
+    const getCachedTimestamp = (dateStr: string): number => {
+      const cache = dateCacheRef.current;
+      let ts = cache.get(dateStr);
+      if (ts === undefined) {
+        ts = new Date(dateStr).getTime();
+        if (cache.size > 500) {
+          const firstKey = cache.keys().next().value;
+          if (firstKey) cache.delete(firstKey);
+        }
+        cache.set(dateStr, ts);
+      }
+      return ts;
+    };
+
     if (!Array.isArray(data) || data.length === 0) {
       return {
         maxStreak: 0,
@@ -84,7 +82,6 @@ export function useAchievementStats(data: DailyXpData[]): AchievementStats {
       };
     }
 
-    // 过滤无效数据项
     const validData = data.filter(
       (d): d is DailyXpData =>
         d != null &&
@@ -97,7 +94,6 @@ export function useAchievementStats(data: DailyXpData[]): AchievementStats {
       .filter(d => d.xp > 0)
       .sort((a, b) => getCachedTimestamp(a.date) - getCachedTimestamp(b.date));
 
-    // 连续天数统计
     let maxStreak = 0;
     let tempStreak = 1;
     const streakMilestones: Record<number, string> = {};
@@ -117,7 +113,6 @@ export function useAchievementStats(data: DailyXpData[]): AchievementStats {
     }
     maxStreak = Math.max(maxStreak, tempStreak);
 
-    // 当前连续天数
     const xpByDate = new Map(data.map(d => [d.date, d.xp]));
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -136,7 +131,6 @@ export function useAchievementStats(data: DailyXpData[]): AchievementStats {
       checkDate.setDate(checkDate.getDate() - 1);
     }
 
-    // 单日最高 XP
     let maxDailyXp = 0;
     const dailyXpMilestones: Record<number, string> = {};
     for (const d of data) {
@@ -144,14 +138,12 @@ export function useAchievementStats(data: DailyXpData[]): AchievementStats {
       recordMilestone(dailyXpMilestones, MILESTONES.dailyXp, d.xp, d.date);
     }
 
-    // 总学习天数
     const totalDays = sortedData.length;
     const totalDaysMilestones: Record<number, string> = {};
     sortedData.forEach((d, i) => {
       recordMilestone(totalDaysMilestones, MILESTONES.totalDays, i + 1, d.date, true);
     });
 
-    // 累计 XP
     const totalXpMilestones: Record<number, string> = {};
     let runningXp = 0;
     for (const d of sortedData) {

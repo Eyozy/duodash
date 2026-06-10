@@ -1,6 +1,6 @@
 import type { UserData, DuolingoRawUser } from "../types";
 import { parseSummaryDateKey, calcDaysSince, resolveTimeZone } from "../utils/dateUtils";
-import { resolveCourses, resolveLearningLanguage, resolveTierIndex, parseCreationDate, resolveIsPlus, resolveTotalXp } from "./dataResolvers";
+import { resolveCourses, resolveLearningLanguage, resolveTierIndex, parseCreationDate, resolveIsPlus, resolveTotalXp } from "./duolingoResolvers";
 import { buildHistoryData, calculateTotalLearningTime } from "./historyBuilder";
 import { resolveTodayStats } from "./todayStatsResolver";
 

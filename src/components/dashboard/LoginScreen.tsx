@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { JsonIcon } from './icons';
+import { JsonIcon } from '../icons';
 
 interface LoginScreenProps {
   onJsonInput: (json: string) => void;

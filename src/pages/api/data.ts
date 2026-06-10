@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 import type { CacheEntry, UserData } from '../../types';
 import { transformDuolingoData } from '../../services/duolingoService';
-import { getEnv, jsonResponse, createAuthChecker } from '../../utils/api-helpers';
-import { CACHE_TTL_MS } from '../../utils/constants';
+import { getEnv, jsonResponse, createAuthChecker } from '../../utils/api-utils';
+import { CACHE_TTL_MS } from '../../constants/config';
 import { isFreshSameDayCache, resolveTimeZone } from '../../utils/dateUtils';
 
 export const prerender = false;

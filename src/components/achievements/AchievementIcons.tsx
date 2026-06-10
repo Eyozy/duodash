@@ -9,7 +9,6 @@ import {
   Crown,
   Star,
   Gem,
-  Trophy,
   Medal,
   BookOpen,
   Map,
@@ -31,7 +30,6 @@ const COLORS = {
   crown: '#FFC800',
   star: '#FFC800',
   diamond: '#CE82FF',
-  trophy: '#FFC800',
   medal: '#FFC800',
   book: '#1CB0F6',
   explorer: '#FF9600',
@@ -74,9 +72,7 @@ const DiamondIcon: React.FC<IconProps> = ({ className = "w-full h-full" }) => (
   <Gem className={className} strokeWidth={1.5} fill={COLORS.diamond} stroke={COLORS.diamond} />
 );
 
-const TrophyIcon: React.FC<IconProps> = ({ className = "w-full h-full" }) => (
-  <Trophy className={className} strokeWidth={1.5} fill={COLORS.trophy} stroke={COLORS.trophy} />
-);
+
 
 const MedalIcon: React.FC<IconProps> = ({ className = "w-full h-full" }) => (
   <Medal className={className} strokeWidth={1.5} fill={COLORS.medal} stroke={COLORS.medal} />
@@ -101,7 +97,6 @@ export const AchievementIconMap = {
   boxer: BoxerIcon,
   explorer: ExplorerIcon,
   legend: LegendIcon,
-  trophy: TrophyIcon,
   crown: CrownIcon,
   calendar: CalendarIcon,
   rocket: RocketIcon,

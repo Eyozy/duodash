@@ -5,3 +5,5 @@ export { Navbar } from './Navbar';
 export { PageHeader } from './PageHeader';
 export { LoadingScreen } from './LoadingScreen';
 export { ErrorScreen } from './ErrorScreen';
+export { AiCoach } from './AiCoach';
+export { LoginScreen } from './LoginScreen';

@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import type { AiProvider } from '../../types';
-import { getEnv, jsonResponse, createAuthChecker } from '../../utils/api-helpers';
+import { getEnv, jsonResponse, createAuthChecker } from '../../utils/api-utils';
 
 export const prerender = false;
 

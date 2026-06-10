@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { UserData } from '../types';
-import { CACHE_TTL_MS } from '../utils/constants';
+import { CACHE_TTL_MS } from '../constants/config';
 import { isFreshSameDayCache } from '../utils/dateUtils';
 
 const USER_DATA_KEY = 'duodash:userData';

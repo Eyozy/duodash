@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { DuoColors } from '../styles/duolingoColors';
-import { HeatmapIcon } from './icons';
+import { DuoColors } from '../../styles/duolingoColors';
+import { HeatmapIcon } from '../icons';
 
 interface HeatmapChartProps {
   data: { date: string; xp: number; time?: number }[];

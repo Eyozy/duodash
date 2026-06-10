@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAchievementStats } from '../../hooks/useAchievementStats';
 import { AchievementIconMap, type AchievementIconType } from './AchievementIcons';
-import { DuoColors, AchievementTiers } from '../../styles/duolingoColors';
+import { DuoColors } from '../../styles/duolingoColors';
+import { AchievementTiers } from '../../constants/tiers';
 import { AwardCheckIcon, AwardLockIcon, TrophyBadgeIcon } from '../icons';
 
 interface Achievement {

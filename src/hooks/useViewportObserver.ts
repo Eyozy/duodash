@@ -2,7 +2,7 @@ import { useState, useEffect, type RefObject } from 'react';
 
 const DEFAULT_INTERSECTION_OPTIONS: IntersectionObserverInit = { rootMargin: '200px' };
 
-export function useIntersectionTrigger(
+export function useViewportObserver(
   ref: RefObject<HTMLElement | null>,
   options: IntersectionObserverInit = DEFAULT_INTERSECTION_OPTIONS
 ): boolean {

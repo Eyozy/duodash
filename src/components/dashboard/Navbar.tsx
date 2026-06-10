@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShareIcon, RefreshIcon } from '../icons';
-import { CACHE_TTL_MS } from '../../utils/constants';
+import { CACHE_TTL_MS } from '../../constants/config';
 
 interface NavbarProps {
   loading: boolean;

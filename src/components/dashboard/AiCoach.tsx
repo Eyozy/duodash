@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { UserData } from '../types';
-import { analyzeUserStats, getAiInfo } from '../services/aiService';
+import type { UserData } from '../../types';
+import { analyzeUserStats, getAiInfo } from '../../services/aiService';
 import ReactMarkdown from 'react-markdown';
-import { CoachIcon, RefreshIcon } from './icons';
-import { useIntersectionTrigger } from '../hooks/useIntersectionTrigger';
+import { CoachIcon, RefreshIcon } from '../icons';
+import { useViewportObserver } from '../../hooks/useViewportObserver';
 
 interface AiCoachProps {
   userData: UserData;
@@ -56,7 +56,7 @@ export function AiCoach({ userData }: AiCoachProps): React.ReactElement {
   const [aiInfo, setAiInfo] = useState<AiInfoState>(EMPTY_AI_INFO);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const aiInfoCacheRef = useRef<AiInfoState | null>(null);
-  const shouldAutoFetch = useIntersectionTrigger(rootRef);
+  const shouldAutoFetch = useViewportObserver(rootRef);
 
   function resetRemoteAnalysis(): void {
     setAnalysis(null);
@@ -152,7 +152,7 @@ export function AiCoach({ userData }: AiCoachProps): React.ReactElement {
         <div className="flex items-start gap-3 sm:gap-4">
           <div className="hidden sm:block flex-shrink-0">
             <img
-              src="https://design.duolingo.com/28e4b3aebfae83e5ff2f.svg"
+              src="/duo-owl.svg"
               alt="Duo"
               width="64"
               height="64"
