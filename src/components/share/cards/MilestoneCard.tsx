@@ -101,14 +101,14 @@ export const MilestoneCard = forwardRef<HTMLDivElement, MilestoneCardProps>(
               <div className="text-xs font-bold tracking-[0.24em] text-neutral-500">
                 {eyebrow}
               </div>
-              <div className={`mt-1 text-[1.8rem] font-black tracking-tight ${accentClass}`}>
+              <div className={`mt-1 text-[1.8rem] font-black tracking-tight whitespace-nowrap ${accentClass}`}>
                 {label}
               </div>
             </div>
           </div>
 
           {/* Middle Numeric/Summary Card */}
-          <div data-export-card="inner" className="mt-4 rounded-[10px] border border-slate-200/80 bg-white/88 px-4 py-3.5 backdrop-blur-sm">
+          <div data-export-card="inner" className="mt-4 rounded-[10px] border border-slate-200/80 bg-white px-4 py-3.5">
             <div className="flex items-end gap-2">
               <span className={`text-[2.8rem] font-black leading-none tracking-[-0.04em] tabular-nums ${valueClass}`}>
                 {value.toLocaleString()}
@@ -124,7 +124,7 @@ export const MilestoneCard = forwardRef<HTMLDivElement, MilestoneCardProps>(
 
           {/* Bottom Card */}
           <div className="mt-4">
-            <div data-export-card="inner" className="rounded-[8px] border border-slate-200/80 bg-white/92 px-4 py-3.5">
+            <div data-export-card="inner" className="rounded-[8px] border border-slate-200/80 bg-white px-4 py-3.5">
               <div className="text-[11px] font-bold tracking-[0.22em] text-neutral-500">
                 {insightLabel}
               </div>
