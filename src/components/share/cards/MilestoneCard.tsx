@@ -84,10 +84,10 @@ export const MilestoneCard = forwardRef<HTMLDivElement, MilestoneCardProps>(
         <div className="relative z-10 flex w-full h-full flex-col justify-center p-5">
           {/* Top Badge and Date */}
           <div className="flex items-start justify-between gap-3">
-            <div className={`inline-flex items-center rounded-pill border px-3 py-1 text-xs font-bold ${badgeClass}`}>
+            <div className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-pill border px-3 py-1 text-xs font-bold ${badgeClass}`}>
               {badge}
             </div>
-            <div className="text-right text-xs font-semibold text-neutral-500">
+            <div className="shrink-0 text-right text-xs font-semibold text-neutral-500">
               {displayDate}
             </div>
           </div>
