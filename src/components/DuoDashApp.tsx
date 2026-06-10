@@ -1,19 +1,18 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, Suspense, lazy, useMemo } from 'react';
 import type { UserData } from '../types';
-import { LoginScreen } from './LoginScreen';
-import { Navbar, PageHeader, StatCard, CourseList, TodayOverview } from './dashboard';
+import { LoginScreen, Navbar, PageHeader, StatCard, CourseList, TodayOverview } from './dashboard';
 import { LoadingScreen, ErrorScreen } from './dashboard';
 import { ShareModal } from './share';
 import { AccountAgeIcon, CourseIcon, HeatmapIcon, TimeIcon, TotalXpIcon, TrendIcon } from './icons';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { buildDemoData } from '../utils/demo-data';
 import { MESSAGES } from '../constants/messages';
+import { CHART_COLORS } from './charts/chartConfig';
 
-const LazyXpHistoryChart = lazy(() => import('./charts/XpHistoryChart'));
-const LazyTimeHistoryChart = lazy(() => import('./charts/TimeHistoryChart'));
-const LazyHeatmapChart = lazy(() => import('./Charts').then(m => ({ default: m.HeatmapChart })));
+const LazyAreaHistoryChart = lazy(() => import('./charts/AreaHistoryChart'));
+const LazyHeatmapChart = lazy(() => import('./charts/HeatmapChart').then(m => ({ default: m.HeatmapChart })));
 const LazyAchievementsSection = lazy(() => import('./achievements/AchievementsSection').then((m) => ({ default: m.AchievementsSection })));
-const LazyAiCoach = lazy(() => import('./AiCoach').then(m => ({ default: m.AiCoach })));
+const LazyAiCoach = lazy(() => import('./dashboard/AiCoach').then(m => ({ default: m.AiCoach })));
 
 function ChartSkeleton(): React.ReactElement {
   return (
@@ -75,8 +74,10 @@ const STAT_CARDS = [
 function DuoDashApp(): React.ReactElement {
   const { userData, loading, error, showLogin, lastUpdated, refresh, setUserData } = useDashboardData();
   const [showShareModal, setShowShareModal] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
 
   function handleJsonInput(jsonStr: string): void {
+    setParseError(null);
     import('../services/duolingoService')
       .then(({ transformDuolingoData }) => {
         try {
@@ -84,9 +85,11 @@ function DuoDashApp(): React.ReactElement {
           const userObj = raw.users ? raw.users[0] : raw;
           setUserData(transformDuolingoData(userObj));
         } catch {
+          setParseError('JSON 格式不正确，请检查粘贴的内容是否完整');
         }
       })
       .catch(() => {
+        setParseError('解析服务加载失败，请刷新页面重试');
       });
   }
 
@@ -98,6 +101,18 @@ function DuoDashApp(): React.ReactElement {
   const hasUserData = userData !== null;
   const hasTimeHistory = viewData.dailyTimeHistory?.some((day) => day.time > 0) ?? false;
   const hasYearlyHistory = Boolean(userData?.yearlyXpHistory?.length);
+
+  const xpSummary = useMemo(() => {
+    const total = viewData.dailyXpHistory.reduce((sum, d) => sum + d.xp, 0);
+    return `近 7 天共获得 ${total} XP`;
+  }, [viewData.dailyXpHistory]);
+
+  const timeSummary = useMemo(() => {
+    const total = (viewData.dailyTimeHistory ?? []).reduce((sum, d) => sum + d.time, 0);
+    const hours = Math.floor(total / 60);
+    const mins = total % 60;
+    return `近 7 天学习 ${hours > 0 ? `${hours}小时${mins}分钟` : `${mins}分钟`}`;
+  }, [viewData.dailyTimeHistory]);
 
   if (loading && !hasUserData) {
     return <LoadingScreen />;
@@ -113,7 +128,7 @@ function DuoDashApp(): React.ReactElement {
         onJsonInput={handleJsonInput}
         onDemo={handleDemo}
         loading={loading}
-        error={error}
+        error={parseError || error}
       />
     );
   }
@@ -149,7 +164,13 @@ function DuoDashApp(): React.ReactElement {
                   </h2>
                   {hasUserData ? (
                     <Suspense fallback={<ChartSkeleton />}>
-                      <LazyXpHistoryChart data={viewData.dailyXpHistory} />
+                      <LazyAreaHistoryChart
+                        data={viewData.dailyXpHistory}
+                        dataKey="xp"
+                        color={CHART_COLORS.xp}
+                        label="经验值"
+                        summary={xpSummary}
+                      />
                     </Suspense>
                   ) : (
                     <ChartSkeleton />
@@ -163,7 +184,13 @@ function DuoDashApp(): React.ReactElement {
                     </h2>
                     {hasUserData ? (
                       <Suspense fallback={<ChartSkeleton />}>
-                        <LazyTimeHistoryChart data={viewData.dailyTimeHistory!} />
+                        <LazyAreaHistoryChart
+                          data={viewData.dailyTimeHistory!}
+                          dataKey="time"
+                          color={CHART_COLORS.time}
+                          label="学习时间"
+                          summary={timeSummary}
+                        />
                       </Suspense>
                     ) : (
                       <ChartSkeleton />

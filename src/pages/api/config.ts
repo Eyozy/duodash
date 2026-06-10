@@ -1,13 +1,20 @@
 import type { APIRoute } from 'astro';
-import { getEnv, jsonResponse } from '../../utils/api-helpers';
-import { isSameOrigin } from '../../utils/auth-helpers';
+import { getEnv, jsonResponse } from '../../utils/api-utils';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
-  // 添加来源检查，防止跨域信息泄露
-  if (!isSameOrigin(request)) {
-    return jsonResponse({ error: 'Forbidden' }, 403);
+  const origin = request.headers.get('origin') || request.headers.get('referer');
+  if (origin) {
+    try {
+      const reqHost = new URL(origin).hostname;
+      const selfHost = new URL(request.url).hostname;
+      if (reqHost !== selfHost && reqHost !== 'localhost' && reqHost !== '127.0.0.1') {
+        return jsonResponse({ error: 'Forbidden' }, 403);
+      }
+    } catch {
+      return jsonResponse({ error: 'Forbidden' }, 403);
+    }
   }
 
   const username = getEnv('DUOLINGO_USERNAME');

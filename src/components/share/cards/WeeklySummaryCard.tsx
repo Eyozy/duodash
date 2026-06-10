@@ -30,14 +30,9 @@ function getWeeklyStatus(daysLearned: number) {
 
 export const WeeklySummaryCard = forwardRef<HTMLDivElement, WeeklySummaryCardProps>(
   ({ summary }, ref) => {
-    const { daysLearned, activeStreak, completionRate, averageXp, bestDayLabel, bestDayXp, totalXp, totalTime, dateRange } = summary;
+    const { daysLearned, completionRate, averageXp, bestDayLabel, bestDayXp, totalXp, totalTime, dateRange } = summary;
     const status = getWeeklyStatus(daysLearned);
     const progressPercent = Math.min(100, Math.max(12, (daysLearned / 7) * 100));
-    const highlight = activeStreak >= 3
-      ? `已经连续活跃 ${activeStreak} 天，节奏很稳。`
-      : bestDayXp > 0
-        ? `${bestDayLabel} 单日冲到 ${bestDayXp} XP，是这一周的高光时刻。`
-        : '这一周刚重新起步，下一次打开就是新的开始。';
 
     return (
       <div
@@ -50,10 +45,10 @@ export const WeeklySummaryCard = forwardRef<HTMLDivElement, WeeklySummaryCardPro
 
         <div className="relative z-10 flex w-full h-full flex-col justify-center p-5">
           <div className="flex items-start justify-between gap-3">
-            <div className="inline-flex items-center rounded-pill border border-status-info bg-status-info-bg px-3 py-1 text-xs font-bold text-status-info">
+            <div className="inline-flex shrink-0 items-center whitespace-nowrap rounded-pill border border-status-info bg-status-info-bg px-3 py-1 text-xs font-bold text-status-info">
               本周报告
             </div>
-            <div className="text-right text-xs font-semibold text-neutral-500">
+            <div className="shrink-0 text-right text-xs font-semibold text-neutral-500">
               {dateRange}
             </div>
           </div>
@@ -75,7 +70,7 @@ export const WeeklySummaryCard = forwardRef<HTMLDivElement, WeeklySummaryCardPro
             </div>
           </div>
 
-          <div data-export-card="inner" className="mt-4 rounded-[10px] border border-slate-200/80 bg-white/88 p-4 backdrop-blur-sm">
+          <div data-export-card="inner" className="mt-4 rounded-[10px] border border-slate-200/80 bg-white p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-sm font-semibold text-neutral-800">
                 本周学习了 {daysLearned} 天
@@ -90,7 +85,7 @@ export const WeeklySummaryCard = forwardRef<HTMLDivElement, WeeklySummaryCardPro
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div data-export-card="inner" className="rounded-[8px] border border-slate-200/80 bg-white/94 px-4 py-3.5">
+            <div data-export-card="inner" className="rounded-[8px] border border-slate-200/80 bg-white px-4 py-3.5">
               <div className="text-[11px] font-bold tracking-[0.22em] text-neutral-500">
                 学习时长
               </div>
@@ -98,7 +93,7 @@ export const WeeklySummaryCard = forwardRef<HTMLDivElement, WeeklySummaryCardPro
                 {totalTime}
               </div>
             </div>
-            <div data-export-card="inner" className="rounded-[8px] border border-slate-200/80 bg-white/94 px-4 py-3.5">
+            <div data-export-card="inner" className="rounded-[8px] border border-slate-200/80 bg-white px-4 py-3.5">
               <div className="text-[11px] font-bold tracking-[0.22em] text-neutral-500">
                 最强一天
               </div>
