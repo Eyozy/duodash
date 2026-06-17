@@ -27,29 +27,17 @@ const PLACEHOLDER_DATA: UserData = {
 };
 
 function DuoDashApp(): React.ReactElement {
-  const { userData, loading, error, showLogin, lastUpdated, refresh, setUserData } = useDashboardData();
+  const { userData, loading, error, showLogin, lastUpdated, isDemo, setIsDemo, refresh, resetToLogin, setUserData } = useDashboardData();
   const [showShareModal, setShowShareModal] = useState(false);
-  const [parseError, setParseError] = useState<string | null>(null);
-
-  function handleJsonInput(jsonStr: string): void {
-    setParseError(null);
-    import('../services/duolingoService')
-      .then(({ transformDuolingoData }) => {
-        try {
-          const raw = JSON.parse(jsonStr);
-          const userObj = raw.users ? raw.users[0] : raw;
-          setUserData(transformDuolingoData(userObj));
-        } catch {
-          setParseError('JSON 格式不正确，请检查粘贴的内容是否完整');
-        }
-      })
-      .catch(() => {
-        setParseError('解析服务加载失败，请刷新页面重试');
-      });
-  }
 
   function handleDemo(): void {
+    localStorage.setItem('duodash:isDemo', 'true');
+    setIsDemo(true);
     setUserData(buildDemoData());
+  }
+
+  function handleExitDemo(): void {
+    resetToLogin();
   }
 
   const viewData = userData ?? PLACEHOLDER_DATA;
@@ -80,16 +68,30 @@ function DuoDashApp(): React.ReactElement {
   if (!hasUserData && showLogin) {
     return (
       <LoginScreen
-        onJsonInput={handleJsonInput}
         onDemo={handleDemo}
-        loading={loading}
-        error={parseError || error}
+        error={error}
       />
     );
   }
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-surface-background">
+      {isDemo && (
+        <div className="bg-amber-50 border-b border-amber-200 py-2.5 px-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center">
+            <span className="text-amber-800 text-xs font-bold">
+              当前正在浏览演示数据。
+            </span>
+            <button
+              onClick={handleExitDemo}
+              className="text-xs font-extrabold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-3 py-1 rounded-button transition-colors cursor-pointer"
+            >
+              配置真实数据
+            </button>
+          </div>
+        </div>
+      )}
+
       <Navbar loading={loading} lastUpdated={lastUpdated} onRefresh={refresh} onShare={() => setShowShareModal(true)} />
 
       <DashboardView

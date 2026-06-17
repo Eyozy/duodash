@@ -25,12 +25,31 @@ async function fetchDashboardData(): Promise<{ status: number; payload: Dashboar
   return { status: response.status, payload };
 }
 
+const USER_DATA_KEY = 'duodash:userData';
+const USER_DATA_TS_KEY = 'duodash:userDataTs';
+const IS_DEMO_KEY = 'duodash:isDemo';
+
 export function useDashboardData() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [isDemo, setIsDemo] = useState(false);
   const { lastUpdated, loadFromCache, saveToCache } = useUserDataCache();
+
+  function resetToLogin(): void {
+    try {
+      localStorage.removeItem(USER_DATA_KEY);
+      localStorage.removeItem(USER_DATA_TS_KEY);
+      localStorage.removeItem(IS_DEMO_KEY);
+    } catch {
+      // ignore
+    }
+    setUserData(null);
+    setError(null);
+    setIsDemo(false);
+    setShowLogin(true);
+  }
 
   function applyLoadedData(next: UserData): void {
     setUserData(next);
@@ -47,6 +66,11 @@ export function useDashboardData() {
           setUserData(cached.data);
           setShowLogin(false);
           setLoading(false);
+          
+          // 恢复 Demo 状态
+          if (localStorage.getItem(IS_DEMO_KEY) === 'true') {
+            setIsDemo(true);
+          }
         }
 
         const { status, payload } = await fetchDashboardData();
@@ -57,6 +81,9 @@ export function useDashboardData() {
         }
 
         if (payload.data) {
+          // 如果后端拉到了真实数据，强制关掉 demo 状态
+          localStorage.removeItem(IS_DEMO_KEY);
+          setIsDemo(false);
           applyLoadedData(payload.data);
         } else if (payload.error !== 'Not configured') {
           setError(payload.error || MESSAGES.ERROR.LOAD_FAILED);
@@ -79,6 +106,8 @@ export function useDashboardData() {
     try {
       const { payload } = await fetchDashboardData();
       if (payload.data) {
+        localStorage.removeItem(IS_DEMO_KEY);
+        setIsDemo(false);
         applyLoadedData(payload.data);
       } else {
         setError(payload.error || MESSAGES.ERROR.REFRESH_FAILED);
@@ -96,7 +125,10 @@ export function useDashboardData() {
     error,
     showLogin,
     lastUpdated,
+    isDemo,
+    setIsDemo,
     refresh,
+    resetToLogin,
     setUserData: applyLoadedData,
   };
 }
