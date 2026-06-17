@@ -187,10 +187,9 @@ DuoDash 通过以下 Duolingo 非官方接口获取数据：
 
 | 接口 | 用途 |
 | --- | --- |
-| `GET /2017-06-30/users?username={username}` | 用户基础信息（连胜、XP、段位、课程等） |
+| `GET /2017-06-30/users?username={username}` | 解析用户 ID |
+| `GET /2023-05-23/users/{id}` | 用户主数据（连胜、XP、段位、全部课程，含数学/音乐） |
 | `GET /2017-06-30/users/{id}/xp_summaries?startDate=1970-01-01` | 完整学习历史（每日 XP、实际学习时长） |
-
-V2 接口无响应时自动回退到 V1 接口（`/users/{username}`）。
 
 ### 字段计算逻辑
 
@@ -203,6 +202,7 @@ V2 接口无响应时自动回退到 V1 接口（`/users/{username}`）。
 | 注册天数 | 当前日期 - `creation_date`（时区感知） |
 | 预估投入时间 | 汇总 `xp_summaries.totalSessionTime`（秒）÷ 60 |
 | 今日 XP / 课程数 | 按浏览器时区从 `xpGains` / `xp_summaries` 筛选当日数据 |
+| 当前学习语言 | 顶层 `learningLanguage` 字段与 `courses` 列表匹配取名称 |
 
 ### 缓存策略
 
