@@ -9,7 +9,7 @@ interface ErrorScreenProps {
 
 export const ErrorScreen = React.memo(function ErrorScreen({ error, onRetry }: ErrorScreenProps): React.ReactElement {
   return (
-    <div className="min-h-screen bg-surface-background flex items-center justify-center p-4">
+    <div className="flex-1 bg-surface-background grid place-items-center p-4">
       <div className="bg-surface rounded-[28px] shadow-card p-12 text-center max-w-md border border-neutral-100">
         <div className="mb-6 flex justify-center">
           <SadFaceIcon className="w-20 h-20" />
