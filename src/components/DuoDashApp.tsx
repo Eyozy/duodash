@@ -1,12 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import type { UserData } from '../types';
-import { LoginScreen, Navbar } from './dashboard';
-import { DashboardView } from './dashboard/DashboardView';
-import { LoadingScreen, ErrorScreen } from './dashboard';
-import { ShareModal } from './share';
+import { useState, useMemo } from 'react';
+import type { ReactElement } from 'react';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { buildDemoData } from '../utils/demo-data';
+import { LoginScreen, Navbar, LoadingScreen, ErrorScreen, DashboardView } from './dashboard';
+import { ShareModal } from './share';
 import { MESSAGES } from '../constants/messages';
+import type { UserData } from '../types';
 
 const PLACEHOLDER_DATA: UserData = {
   streak: 0,
@@ -26,7 +25,7 @@ const PLACEHOLDER_DATA: UserData = {
   yearlyXpHistory: [],
 };
 
-function DuoDashApp(): React.ReactElement {
+function DuoDashApp(): ReactElement {
   const { userData, loading, error, showLogin, lastUpdated, isDemo, setIsDemo, refresh, resetToLogin, setUserData } = useDashboardData();
   const [showShareModal, setShowShareModal] = useState(false);
 
@@ -42,8 +41,6 @@ function DuoDashApp(): React.ReactElement {
 
   const viewData = userData ?? PLACEHOLDER_DATA;
   const hasUserData = userData !== null;
-  const hasTimeHistory = viewData.dailyTimeHistory?.some((day) => day.time > 0) ?? false;
-  const hasYearlyHistory = Boolean(userData?.yearlyXpHistory?.length);
 
   const xpSummary = useMemo(() => {
     const total = viewData.dailyXpHistory.reduce((sum, d) => sum + d.xp, 0);

@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import { memo, useState, useCallback } from 'react';
+import type { ReactElement } from 'react';
 
 interface LoginScreenProps {
   onDemo: () => void;
@@ -20,7 +21,7 @@ function useCopyAction(text: string): [boolean, () => void] {
   return [copied, copy];
 }
 
-export const LoginScreen = React.memo(function LoginScreen({ onDemo, error }: LoginScreenProps): React.ReactElement {
+export const LoginScreen = memo(function LoginScreen({ onDemo, error }: LoginScreenProps): ReactElement {
   const [copiedCp, handleCopyCp] = useCopyAction(CP_COMMAND);
   const [copiedJwt, handleCopyJwt] = useCopyAction(JWT_COMMAND);
 
@@ -95,4 +96,3 @@ export const LoginScreen = React.memo(function LoginScreen({ onDemo, error }: Lo
     </div>
   );
 });
-

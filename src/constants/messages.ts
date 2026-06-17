@@ -13,8 +13,6 @@ export const MESSAGES = {
     CONFIG_CHECK: '请检查环境变量中的 DUOLINGO_USERNAME 和 DUOLINGO_JWT 配置是否正确',
   },
   PLACEHOLDER: {
-    NO_DATA: '暂无数据',
-    UNKNOWN: '未知',
     LOADING: '加载中…',
   },
   ACTION: {

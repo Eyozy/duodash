@@ -1,5 +1,5 @@
 import type { UserData } from '../types';
-import { formatMonthDay, formatDuration, toLocalDateKey, getMonday } from './dateUtils';
+import { formatMonthDayInTimeZone, formatDuration, toLocalDateKey, getMonday } from './dateUtils';
 
 type DemoHistoryPoint = { date: string; xp: number; time: number };
 
@@ -36,12 +36,12 @@ export function buildDemoData(now = new Date()): UserData {
     const entry = historyByDate.get(toLocalDateKey(currentDate));
 
     weeklyXpHistory.push({
-      date: formatMonthDay(currentDate),
+      date: formatMonthDayInTimeZone(currentDate),
       xp: entry?.xp ?? 0,
       isFuture: false,
     });
     weeklyTimeHistory.push({
-      date: formatMonthDay(currentDate),
+      date: formatMonthDayInTimeZone(currentDate),
       time: entry?.time ?? 0,
       isFuture: false,
     });
@@ -69,11 +69,11 @@ export function buildDemoData(now = new Date()): UserData {
       { id: 'fr', title: '法语', xp: 2500, fromLanguage: 'zh', learningLanguage: 'fr', crowns: 5 },
     ],
     dailyXpHistory: dailyHistory.map(({ date, xp }) => ({
-      date: formatMonthDay(new Date(`${date}T00:00:00`)),
+      date: formatMonthDayInTimeZone(new Date(`${date}T00:00:00`)),
       xp,
     })),
     dailyTimeHistory: dailyHistory.map(({ date, time }) => ({
-      date: formatMonthDay(new Date(`${date}T00:00:00`)),
+      date: formatMonthDayInTimeZone(new Date(`${date}T00:00:00`)),
       time,
     })),
     yearlyXpHistory: yearlyHistory,

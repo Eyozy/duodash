@@ -3,11 +3,7 @@ import { parseSummaryDateKey, calcDaysSince, resolveTimeZone } from "../utils/da
 import { resolveCourses, resolveLearningLanguage, resolveTierIndex, parseCreationDate, resolveIsPlus, resolveTotalXp } from "./duolingoResolvers";
 import { buildHistoryData, calculateTotalLearningTime } from "./historyBuilder";
 import { resolveTodayStats } from "./todayStatsResolver";
-
-const LEAGUE_TIERS = [
-  "青铜", "白银", "黄金", "蓝宝石", "红宝石",
-  "祖母绿", "紫水晶", "珍珠", "黑曜石", "钻石"
-];
+import { LEAGUE_TIERS } from "../constants/tiers";
 
 export function transformDuolingoData(rawData: DuolingoRawUser, timeZone?: string): UserData {
   if (!rawData || typeof rawData !== 'object') {

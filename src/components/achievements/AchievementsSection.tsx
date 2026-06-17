@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { memo, useState, useEffect, useMemo, useRef } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { useAchievementStats } from '../../hooks/useAchievementStats';
 import { AchievementIconMap, type AchievementIconType } from './AchievementIcons';
 import { DuoColors } from '../../styles/duolingoColors';
@@ -61,7 +62,7 @@ interface AchievementsSectionProps {
   data: { date: string; xp: number; time?: number }[];
 }
 
-function renderIcon(iconName: AchievementIconType, className?: string): React.ReactNode {
+function renderIcon(iconName: AchievementIconType, className?: string): ReactNode {
   const IconComponent = AchievementIconMap[iconName];
   return IconComponent ? <IconComponent className={className} /> : null;
 }
@@ -109,7 +110,7 @@ function buildBadgeStatus(stats: AchievementStats): BadgeStatus[] {
   });
 }
 
-export function AchievementsSection({ data }: AchievementsSectionProps): React.ReactElement {
+export function AchievementsSection({ data }: AchievementsSectionProps): ReactElement {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [displayedId, setDisplayedId] = useState<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -146,7 +147,6 @@ export function AchievementsSection({ data }: AchievementsSectionProps): React.R
             <h2 className="text-lg font-bold text-neutral-800 leading-none">奖项</h2>
           </div>
           <div className="flex items-center gap-4">
-            {/* 当前连续天数 */}
             {achievementStats.currentStreak > 0 && (
               <div className="flex items-center gap-1.5 text-sm font-bold" style={{ color: DuoColors.foxOrange }}>
                 <div className="w-5 h-5">{renderIcon('flame')}</div>
@@ -323,4 +323,4 @@ export function AchievementsSection({ data }: AchievementsSectionProps): React.R
       </div>
     </div>
   );
-};
+}

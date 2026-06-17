@@ -1,5 +1,5 @@
-import React from 'react';
-import type { ReactNode } from 'react';
+import { memo } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 interface StatCardProps {
   icon: ReactNode;
@@ -9,13 +9,13 @@ interface StatCardProps {
   iconBgClass?: string;
 }
 
-export const StatCard = React.memo(function StatCard({
+export const StatCard = memo(function StatCard({
   icon,
   value,
   label,
   colorClass,
   iconBgClass = 'bg-neutral-100',
-}: StatCardProps): React.ReactElement {
+}: StatCardProps): ReactElement {
   return (
     <div className="panel-card animate-fade-in-up p-2.5 min-[400px]:p-3 sm:p-4 lg:p-5">
       <div className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-pill flex items-center justify-center mb-2 sm:mb-3 lg:mb-4 shrink-0 ${iconBgClass}`}>

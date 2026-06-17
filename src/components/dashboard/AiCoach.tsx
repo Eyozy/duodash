@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import type { ReactElement } from 'react';
 import type { UserData } from '../../types';
 import { analyzeUserStats, getAiInfo } from '../../services/aiService';
 import ReactMarkdown from 'react-markdown';
@@ -50,7 +51,7 @@ function isUnavailableAnalysis(message: string): boolean {
     || message === 'AI 返回了空内容。';
 }
 
-export function AiCoach({ userData }: AiCoachProps): React.ReactElement {
+export function AiCoach({ userData }: AiCoachProps): ReactElement {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [aiInfo, setAiInfo] = useState<AiInfoState>(EMPTY_AI_INFO);
@@ -198,4 +199,4 @@ export function AiCoach({ userData }: AiCoachProps): React.ReactElement {
       </div>
     </div>
   );
-};
+}

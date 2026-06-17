@@ -5,3 +5,8 @@ export const AchievementTiers = {
   platinum: { primary: '#1CB0F6', secondary: '#1899D6', bg: '#EBF8FF', text: '#0C7BB3' },
   diamond: { primary: '#CE82FF', secondary: '#B35FE0', bg: '#F9F0FF', text: '#8B4FC7' },
 } as const;
+
+export const LEAGUE_TIERS = [
+  "青铜", "白银", "黄金", "蓝宝石", "红宝石",
+  "祖母绿", "紫水晶", "珍珠", "黑曜石", "钻石"
+];

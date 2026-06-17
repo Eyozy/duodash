@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { UserData } from '../types';
 import { useUserDataCache } from './useUserDataCache';
 import { MESSAGES } from '../constants/messages';
+import { USER_DATA_KEY, USER_DATA_TS_KEY } from './useUserDataCache';
 
 interface DashboardDataResponse {
   data?: UserData;
@@ -25,8 +26,6 @@ async function fetchDashboardData(): Promise<{ status: number; payload: Dashboar
   return { status: response.status, payload };
 }
 
-const USER_DATA_KEY = 'duodash:userData';
-const USER_DATA_TS_KEY = 'duodash:userDataTs';
 const IS_DEMO_KEY = 'duodash:isDemo';
 
 export function useDashboardData() {

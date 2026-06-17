@@ -97,15 +97,6 @@ export function parseSummaryDateKey(date: number | string, timeZone: string = DE
 }
 
 /**
- * 获取指定日期的开始时间（00:00:00）
- */
-function getStartOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-/**
  * 获取指定日期所在自然周的周一
  */
 export function getMonday(date: Date, timeZone: string = DEFAULT_TIMEZONE): Date {
@@ -145,22 +136,9 @@ export function calcDaysSince(createdAt: Date, timeZone: string = DEFAULT_TIMEZO
 /**
  * 格式化日期为"月/日"格式
  */
-export function formatMonthDay(date: Date): string {
-  return date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
-}
-
 export function formatMonthDayInTimeZone(date: Date, timeZone: string = DEFAULT_TIMEZONE): string {
   return date.toLocaleDateString('zh-CN', {
     month: 'numeric',
-    day: 'numeric',
-    timeZone: resolveTimeZone(timeZone)
-  });
-}
-
-export function formatFullDateInTimeZone(date: Date, timeZone: string = DEFAULT_TIMEZONE): string {
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
     day: 'numeric',
     timeZone: resolveTimeZone(timeZone)
   });

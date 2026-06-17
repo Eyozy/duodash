@@ -1,4 +1,5 @@
-import React from 'react';
+import { memo } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import type { UserData } from '../../types';
 import { SnowflakeIcon, TimeIcon } from '../icons';
 
@@ -14,22 +15,21 @@ function getTodayMinutes(userData: UserData | null): number | null {
   return lastEntry.time;
 }
 
-export const TodayOverview = React.memo(function TodayOverview({ userData }: TodayOverviewProps): React.ReactElement {
+export const TodayOverview = memo(function TodayOverview({ userData }: TodayOverviewProps): ReactElement {
   const todayMinutes = getTodayMinutes(userData);
   const todayTime = todayMinutes ?? '-';
   const stats = [
-    { label: '今日 XP', value: userData ? (userData.xpToday ?? '-') : '—', accentClass: 'text-status-success', dotClass: 'bg-status-success' },
+    { label: '今日 XP', value: userData ? (userData.xpToday ?? '-') : '—', accentClass: 'text-brand-500', dotClass: 'bg-brand-500' },
     { label: '今日课程', value: userData ? (userData.lessonsToday ?? '-') : '—', accentClass: 'text-blue-500', dotClass: 'bg-blue-500' },
     { label: '连胜天数', value: userData ? userData.streak : '—', accentClass: 'text-orange-500', dotClass: 'bg-orange-500' },
     { label: '学习分钟', value: todayTime, accentClass: 'text-purple-500', dotClass: 'bg-purple-500' },
   ];
 
-  function renderTodayStatus(): React.ReactNode {
+  function renderTodayStatus(): ReactNode {
     if (!userData) {
       return <span className="flex items-center gap-1 text-xs text-neutral-500"><TimeIcon className="w-3.5 h-3.5" /> 今日还未学习</span>;
     }
 
-    // 优先检查是否使用了冻结卡（当 xpToday 为 0 或未定义时）
     if (userData.streakExtendedToday && (!userData.xpToday || userData.xpToday === 0)) {
       return <span className="flex items-center gap-1 text-xs text-blue-500"><SnowflakeIcon className="w-3.5 h-3.5" /> 使用了连胜冻结卡</span>;
     }

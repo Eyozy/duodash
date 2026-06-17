@@ -1,4 +1,5 @@
-import React from 'react';
+import { memo } from 'react';
+import type { ReactElement } from 'react';
 import { SadFaceIcon } from '../icons';
 import { MESSAGES } from '../../constants/messages';
 
@@ -7,7 +8,7 @@ interface ErrorScreenProps {
   onRetry?: () => void;
 }
 
-export const ErrorScreen = React.memo(function ErrorScreen({ error, onRetry }: ErrorScreenProps): React.ReactElement {
+export const ErrorScreen = memo(function ErrorScreen({ error, onRetry }: ErrorScreenProps): ReactElement {
   return (
     <div className="flex-1 bg-surface-background grid place-items-center p-4">
       <div className="bg-surface rounded-[28px] shadow-card p-12 text-center max-w-md border border-neutral-100">

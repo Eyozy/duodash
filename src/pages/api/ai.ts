@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import type { AiProvider } from '../../types';
-import { getEnv, jsonResponse, createAuthChecker } from '../../utils/api-utils';
+import { getEnv, jsonResponse, createAuthChecker, sanitizeErrorMessage } from '../../utils/api-utils';
 
 export const prerender = false;
 
@@ -165,16 +165,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     return buildResponse(analysis, config);
   } catch (error: unknown) {
-    // 错误消息脱敏：移除可能包含的 API key、URL 等敏感信息
-    let message = error instanceof Error ? error.message : 'Unknown error';
-    // 移除可能的 API key (通常是长字符串)
-    message = message.replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
-    // 移除完整 URL
-    message = message.replace(/https?:\/\/[^\s]+/g, '[API_ENDPOINT]');
-    // 限制错误消息长度
-    if (message.length > 100) {
-      message = message.substring(0, 100) + '...';
-    }
+    const message = sanitizeErrorMessage(error);
     return buildResponse(`咕咕！连接出错：${message}。请检查环境变量中的 API 配置。`, config);
   }
 };

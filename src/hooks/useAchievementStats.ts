@@ -1,4 +1,7 @@
 import { useMemo, useRef } from 'react';
+import { MS_PER_DAY, toLocalDateKey } from '../utils/dateUtils';
+
+const MAX_STREAK_CHECK = 3650;
 
 interface DailyXpData {
   date: string;
@@ -25,15 +28,6 @@ const MILESTONES = {
   totalXp: [10000, 50000, 100000, 500000],
 } as const;
 
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
-const MAX_STREAK_CHECK = 3650;
-
-function formatDateString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 
 function recordMilestone(
   milestones: Record<number, string>,
@@ -118,14 +112,14 @@ export function useAchievementStats(data: DailyXpData[]): AchievementStats {
     today.setHours(0, 0, 0, 0);
     const checkDate = new Date(today);
 
-    const todayXp = xpByDate.get(formatDateString(today));
+    const todayXp = xpByDate.get(toLocalDateKey(today));
     if (!todayXp || todayXp === 0) {
       checkDate.setDate(checkDate.getDate() - 1);
     }
 
     let currentStreak = 0;
     for (let i = 0; i < MAX_STREAK_CHECK; i++) {
-      const xp = xpByDate.get(formatDateString(checkDate));
+      const xp = xpByDate.get(toLocalDateKey(checkDate));
       if (!xp || xp <= 0) break;
       currentStreak++;
       checkDate.setDate(checkDate.getDate() - 1);

@@ -40,16 +40,13 @@ export interface UserData {
 
 export type AiProvider = 'openrouter' | 'deepseek' | 'siliconflow' | 'moonshot' | 'zenmux' | 'custom';
 
-export interface DuolingoCalendarEvent {
+interface DuolingoCalendarEvent {
   datetime: number;
   improvement: number;
   event_type?: string;
 }
 
-/** API 返回的原始课程数据，与 Course 结构相同 */
-export type DuolingoRawCourse = Course;
-
-export interface DuolingoLanguageDataDetail {
+interface DuolingoLanguageDataDetail {
   points: number;
   crowns?: number;
   language_string: string;
@@ -68,8 +65,7 @@ export interface DuolingoLanguageDataDetail {
   level_progress?: number;
 }
 
-// V1 API language entry
-export interface DuolingoLanguage {
+interface DuolingoLanguage {
   language: string;
   language_string: string;
   points: number;
@@ -77,22 +73,19 @@ export interface DuolingoLanguage {
   current_learning?: boolean;
 }
 
-// Tracking properties from API
-export interface DuolingoTrackingProperties {
+interface DuolingoTrackingProperties {
   gems?: number;
   league_tier?: number;
   leaderboard_league?: number;
   user_id?: number;
 }
 
-// Inventory data
-export interface DuolingoInventory {
+interface DuolingoInventory {
   premium_subscription?: boolean;
   super_subscription?: boolean;
 }
 
-// Streak data
-export interface DuolingoStreakData {
+interface DuolingoStreakData {
   currentStreak?: {
     startDate?: string;
     endDate?: string;
@@ -100,16 +93,14 @@ export interface DuolingoStreakData {
   };
 }
 
-// XP gain event
-export interface DuolingoXpGain {
+interface DuolingoXpGain {
   time: number;
   xp: number;
   skillId?: string;
   eventType?: string;
 }
 
-// XP summary from xp_summaries API
-export interface DuolingoXpSummary {
+interface DuolingoXpSummary {
   date: number | string;
   numSessions?: number;
   gainedXp?: number;
@@ -134,9 +125,9 @@ export interface DuolingoRawUser {
   lingots?: number;
   rupees?: number;
   tier?: number;
-  courses?: DuolingoRawCourse[];
+  courses?: Course[];
   language_data?: { [key: string]: DuolingoLanguageDataDetail };
-  currentCourse?: DuolingoRawCourse;
+  currentCourse?: Course;
   calendar?: DuolingoCalendarEvent[];
   creationDate?: number;
   created?: string;
@@ -169,7 +160,6 @@ export interface DuolingoRawUser {
   streakData?: DuolingoStreakData;
   xpGains?: DuolingoXpGain[];
   _xpSummaries?: DuolingoXpSummary[];
-  _leaderboardHistory?: unknown;
 }
 
 // Cache entry for API responses

@@ -1,11 +1,12 @@
-import React from 'react';
+import { memo } from 'react';
+import type { ReactElement } from 'react';
 import { MESSAGES } from '../../constants/messages';
 
 interface LoadingScreenProps {
   message?: string;
 }
 
-export const LoadingScreen = React.memo(function LoadingScreen({ message = MESSAGES.LOADING.DEFAULT }: LoadingScreenProps): React.ReactElement {
+export const LoadingScreen = memo(function LoadingScreen({ message = MESSAGES.LOADING.DEFAULT }: LoadingScreenProps): ReactElement {
   return (
     <div className="flex-1 bg-surface-background grid place-items-center p-4">
       <div className="bg-surface rounded-[28px] shadow-card p-12 text-center border border-neutral-100">

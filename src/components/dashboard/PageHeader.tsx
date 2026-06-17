@@ -1,4 +1,4 @@
-import React from 'react';
+import type { ReactElement } from 'react';
 import type { UserData } from '../../types';
 import { GemsIcon, LeagueIcon, StreakIcon, SuperIcon } from '../icons';
 
@@ -11,7 +11,7 @@ function normalizeLeagueLabel(league: string): string {
   return league.replace(/\s*\([^)]*\)\s*$/, '').trim();
 }
 
-export function PageHeader({ userData, viewData }: PageHeaderProps): React.ReactElement {
+export function PageHeader({ userData, viewData }: PageHeaderProps): ReactElement {
   const leagueLabel = normalizeLeagueLabel(viewData.league);
 
   return (

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import type { CacheEntry, UserData } from '../../types';
 import { transformDuolingoData } from '../../services/duolingoService';
-import { getEnv, jsonResponse, createAuthChecker } from '../../utils/api-utils';
+import { getEnv, jsonResponse, createAuthChecker, sanitizeErrorMessage } from '../../utils/api-utils';
 import { CACHE_TTL_MS } from '../../constants/config';
 import { isFreshSameDayCache, resolveTimeZone } from '../../utils/dateUtils';
 
@@ -124,13 +124,6 @@ export const GET: APIRoute = async ({ request }) => {
 
     return jsonResponse({ data: transformed }, 200, { cacheControl: 'private, max-age=60' });
   } catch (error: unknown) {
-    // 错误消息脱敏：移除可能包含的敏感信息
-    let message = error instanceof Error ? error.message : 'Unknown error';
-    message = message.replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
-    message = message.replace(/https?:\/\/[^\s]+/g, '[API_ENDPOINT]');
-    if (message.length > 100) {
-      message = message.substring(0, 100) + '...';
-    }
-    return jsonResponse({ error: message }, 500);
+    return jsonResponse({ error: sanitizeErrorMessage(error) }, 500);
   }
 };

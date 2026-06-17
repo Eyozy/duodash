@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import type { ReactElement } from 'react';
 import { createPortal } from 'react-dom';
 import { DuoColors } from '../../styles/duolingoColors';
 import { HeatmapIcon } from '../icons';
@@ -37,7 +38,7 @@ function getColor(xp: number, maxXp: number): string {
   return '#216E39';
 }
 
-export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
+export function HeatmapChart({ data }: HeatmapChartProps): ReactElement {
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
   const [selectedQuarter, setSelectedQuarter] = useState<number>(Math.ceil((now.getMonth() + 1) / 3));
@@ -384,4 +385,4 @@ export function HeatmapChart({ data }: HeatmapChartProps): React.ReactElement {
       </div>
     </div>
   );
-};
+}

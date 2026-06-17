@@ -3,8 +3,8 @@ import type { UserData } from '../types';
 import { CACHE_TTL_MS } from '../constants/config';
 import { isFreshSameDayCache } from '../utils/dateUtils';
 
-const USER_DATA_KEY = 'duodash:userData';
-const USER_DATA_TS_KEY = 'duodash:userDataTs';
+export const USER_DATA_KEY = 'duodash:userData';
+export const USER_DATA_TS_KEY = 'duodash:userDataTs';
 
 interface StorageLike {
   getItem(key: string): string | null;

@@ -44,7 +44,6 @@ export function createAuthChecker(getSecretToken: () => string) {
         return timingSafeEqual(urlToken, secretToken);
       }
     } catch {
-      // 忽略 URL 解析错误
     }
 
     const authHeader = request.headers.get('Authorization');
@@ -68,7 +67,6 @@ export function createAuthChecker(getSecretToken: () => string) {
           (isLocalhost && process.env.NODE_ENV === 'development');
         if (isSameHost) return true;
       } catch {
-        // URL 解析失败，忽略
       }
     }
 
@@ -77,4 +75,14 @@ export function createAuthChecker(getSecretToken: () => string) {
     }
     return false;
   };
+}
+
+export function sanitizeErrorMessage(error: unknown): string {
+  let message = error instanceof Error ? error.message : 'Unknown error';
+  message = message.replace(/[a-zA-Z0-9_-]{20,}/g, '[REDACTED]');
+  message = message.replace(/https?:\/\/[^\s]+/g, '[API_ENDPOINT]');
+  if (message.length > 100) {
+    message = message.substring(0, 100) + '...';
+  }
+  return message;
 }

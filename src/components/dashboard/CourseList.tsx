@@ -1,14 +1,15 @@
-import React from 'react';
+import { memo } from 'react';
+import type { ReactElement } from 'react';
 import type { Course } from '../../types';
 import { DistributionIcon } from '../icons';
 
-const CHART_COLORS = ['#58cc02', '#ce82ff', '#ff9600', '#ff4b4b', '#1cb0f6', '#ffc800'];
+const COURSE_COLORS = ['#58cc02', '#ce82ff', '#ff9600', '#ff4b4b', '#1cb0f6', '#ffc800'];
 
 interface CourseListProps {
   courses: Course[];
 }
 
-export const CourseList = React.memo(function CourseList({ courses }: CourseListProps): React.ReactElement {
+export const CourseList = memo(function CourseList({ courses }: CourseListProps): ReactElement {
   const sortedCourses = [...courses].sort((a, b) => b.xp - a.xp);
   const totalCourseXp = sortedCourses.reduce((acc, c) => acc + c.xp, 0);
   const maxCourseXp = sortedCourses[0]?.xp ?? 0;
@@ -38,7 +39,7 @@ export const CourseList = React.memo(function CourseList({ courses }: CourseList
             {sortedCourses.map((course, idx) => {
               const percent = totalCourseXp > 0 ? ((course.xp / totalCourseXp) * 100).toFixed(1) : '0';
               const relativeWidth = maxCourseXp > 0 ? (course.xp / maxCourseXp) * 100 : 0;
-              const color = CHART_COLORS[idx % CHART_COLORS.length];
+              const color = COURSE_COLORS[idx % COURSE_COLORS.length];
 
               return (
                 <div

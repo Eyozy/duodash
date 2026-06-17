@@ -1,4 +1,5 @@
-import React, { useId, useRef } from 'react';
+import { memo, useId, useRef } from 'react';
+import type { ReactElement } from 'react';
 import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts';
 import { useChartDimensions } from '../../hooks/useChartDimensions';
 import {
@@ -19,7 +20,7 @@ interface AreaHistoryChartProps {
   summary: string;
 }
 
-function AreaHistoryChart({ data, dataKey, color, label, summary }: AreaHistoryChartProps): React.ReactElement {
+function AreaHistoryChart({ data, dataKey, color, label, summary }: AreaHistoryChartProps): ReactElement {
   const gradientId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const dimensions = useChartDimensions(containerRef);
@@ -57,4 +58,4 @@ function AreaHistoryChart({ data, dataKey, color, label, summary }: AreaHistoryC
   );
 }
 
-export default React.memo(AreaHistoryChart);
+export default memo(AreaHistoryChart);

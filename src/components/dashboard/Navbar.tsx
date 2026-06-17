@@ -1,4 +1,5 @@
-import React from 'react';
+import { memo } from 'react';
+import type { ReactElement } from 'react';
 import { ShareIcon, RefreshIcon } from '../icons';
 import { CACHE_TTL_MS } from '../../constants/config';
 
@@ -22,7 +23,7 @@ function getUpdateStatusText(loading: boolean, lastUpdated: number | null, now: 
   return '尚未更新';
 }
 
-export const Navbar = React.memo(function Navbar({ loading, lastUpdated, onRefresh, onShare }: NavbarProps): React.ReactElement {
+export const Navbar = memo(function Navbar({ loading, lastUpdated, onRefresh, onShare }: NavbarProps): ReactElement {
   const now = Date.now();
   const isStale = Boolean(lastUpdated && now - lastUpdated > CACHE_TTL_MS);
 

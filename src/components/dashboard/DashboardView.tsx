@@ -1,4 +1,5 @@
-import React, { Suspense, lazy } from 'react';
+import { Suspense, lazy } from 'react';
+import type { ReactElement } from 'react';
 import type { UserData } from '../../types';
 import { PageHeader, StatCard, CourseList, TodayOverview } from './index';
 import { AccountAgeIcon, CourseIcon, HeatmapIcon, TimeIcon, TotalXpIcon, TrendIcon } from '../icons';
@@ -10,7 +11,7 @@ const LazyHeatmapChart = lazy(() => import('../charts/HeatmapChart').then(m => (
 const LazyAchievementsSection = lazy(() => import('../achievements/AchievementsSection').then((m) => ({ default: m.AchievementsSection })));
 const LazyAiCoach = lazy(() => import('./AiCoach').then(m => ({ default: m.AiCoach })));
 
-function ChartSkeleton(): React.ReactElement {
+function ChartSkeleton(): ReactElement {
   return (
     <div className="panel-card-muted flex h-40 w-full items-center justify-center animate-pulse">
       <span className="text-neutral-500 text-sm">{MESSAGES.LOADING.PLACEHOLDER}</span>
@@ -56,7 +57,7 @@ interface DashboardViewProps {
   timeSummary: string;
 }
 
-export function DashboardView({ userData, viewData, xpSummary, timeSummary }: DashboardViewProps): React.ReactElement {
+export function DashboardView({ userData, viewData, xpSummary, timeSummary }: DashboardViewProps): ReactElement {
   const hasUserData = userData !== null;
   const hasTimeHistory = viewData.dailyTimeHistory?.some((day) => day.time > 0) ?? false;
   const hasYearlyHistory = Boolean(userData?.yearlyXpHistory?.length);
