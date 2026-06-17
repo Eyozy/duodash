@@ -56,10 +56,9 @@ export const GET: APIRoute = async ({ request }) => {
 
   try {
     const headers: HeadersInit = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'User-Agent': 'Duolingo/7.41.4 (Android; 10; SM-G960F)',
       'Accept': 'application/json',
-      'Authorization': `Bearer ${jwt}`,
-      'Cookie': `jwt_token=${jwt}`
+      'Authorization': `Bearer ${jwt}`
     };
 
     // 1) 用旧接口查 userId（仅取 id 字段）
