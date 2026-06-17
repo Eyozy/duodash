@@ -1,17 +1,6 @@
 import { forwardRef } from 'react';
 import { WeeklyReportIcon } from '../../icons';
-
-interface WeeklySummaryData {
-  daysLearned: number;
-  activeStreak: number;
-  completionRate: number;
-  averageXp: number;
-  bestDayLabel: string;
-  bestDayXp: number;
-  totalXp: number;
-  totalTime: string;
-  dateRange: string;
-}
+import type { WeeklySummaryData } from '../ShareModal';
 
 interface WeeklySummaryCardProps {
   summary: WeeklySummaryData;

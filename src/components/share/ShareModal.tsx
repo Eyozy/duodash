@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import type { UserData } from '../../types';
 import { MilestoneCard, WeeklySummaryCard } from './cards';
 import { useSnapdom } from './useSnapdom';
 import { DownloadImageIcon, MilestoneXpIcon, ShareIcon, StreakCardIcon, WeeklyReportIcon } from '../icons';
-import { formatMonthDay, formatDuration, getMonday } from '../../utils/dateUtils';
+import { formatMonthDayInTimeZone, formatDuration, getMonday } from '../../utils/dateUtils';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -13,9 +14,8 @@ interface ShareModalProps {
 
 type CardType = 'milestone-streak' | 'milestone-xp' | 'weekly';
 
-interface WeeklySummaryData {
+export interface WeeklySummaryData {
   daysLearned: number;
-  activeStreak: number;
   completionRate: number;
   averageXp: number;
   bestDayLabel: string;
@@ -25,7 +25,7 @@ interface WeeklySummaryData {
   dateRange: string;
 }
 
-const CARD_OPTIONS: { type: CardType; label: string; icon: React.ReactNode }[] = [
+const CARD_OPTIONS: { type: CardType; label: string; icon: ReactNode }[] = [
   {
     type: 'milestone-streak',
     label: '连胜成就',
@@ -67,10 +67,6 @@ function buildWeeklySummaryData(userData: UserData, now = new Date()): WeeklySum
     (best, day) => (day.xp > best.xp ? day : best),
     { date: '—', xp: 0, isFuture: false }
   );
-  const activeStreak = completedDays.reduce(
-    (streak, day) => (day.xp > 0 ? streak + 1 : 0),
-    0
-  );
   const totalTime = formatDuration(totalMinutes);
   const monday = getMonday(now);
   const sunday = new Date(monday);
@@ -78,18 +74,17 @@ function buildWeeklySummaryData(userData: UserData, now = new Date()): WeeklySum
 
   return {
     daysLearned,
-    activeStreak,
     completionRate,
     averageXp,
     bestDayLabel: bestDay.date,
     bestDayXp: bestDay.xp,
     totalXp,
     totalTime,
-    dateRange: `${formatMonthDay(monday)} - ${formatMonthDay(sunday)}`,
+    dateRange: `${formatMonthDayInTimeZone(monday)} - ${formatMonthDayInTimeZone(sunday)}`,
   };
 }
 
-export function ShareModal({ isOpen, onClose, userData }: ShareModalProps): React.ReactElement | null {
+export function ShareModal({ isOpen, onClose, userData }: ShareModalProps): ReactElement | null {
   const [selectedCard, setSelectedCard] = useState<CardType>('milestone-streak');
   const cardRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);

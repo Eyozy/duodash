@@ -94,11 +94,6 @@ function createExportRoot(element: HTMLElement): HTMLDivElement {
 }
 
 function stripExportDecoration(root: HTMLElement): void {
-  // Ensure the root card itself has border and shadow stripped
-  root.style.setProperty('border', 'none', 'important');
-  root.style.setProperty('border-width', '0px', 'important');
-  root.style.setProperty('outline', 'none', 'important');
-  root.style.setProperty('box-shadow', 'none', 'important');
   root.style.borderRadius = '0';
   root.classList.remove('border', 'border-slate-200');
 

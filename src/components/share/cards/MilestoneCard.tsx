@@ -4,7 +4,6 @@ import { MilestoneXpIcon, StreakCardIcon } from '../../icons';
 interface MilestoneCardProps {
   type: 'streak' | 'xp';
   value: number;
-  date?: string;
   accountAgeDays?: number;
 }
 
@@ -44,7 +43,7 @@ const CONFIG = {
 } as const;
 
 export const MilestoneCard = forwardRef<HTMLDivElement, MilestoneCardProps>(
-  ({ type, value, date, accountAgeDays }, ref) => {
+  ({ type, value, accountAgeDays }, ref) => {
     const {
       icon,
       badge,
@@ -62,7 +61,7 @@ export const MilestoneCard = forwardRef<HTMLDivElement, MilestoneCardProps>(
       radialGradient,
     } = CONFIG[type];
 
-    const displayDate = date || new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' });
+    const displayDate = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' });
 
     const displayInsightValue = type === 'xp' && accountAgeDays
       ? `${Math.round(value / accountAgeDays)} XP`
