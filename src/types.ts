@@ -2,9 +2,10 @@ export interface Course {
   title: string;
   xp: number;
   fromLanguage: string;
-  learningLanguage: string;
+  learningLanguage?: string;
   crowns: number;
   id: string;
+  subject?: string;
   current_learning?: boolean;
 }
 
@@ -151,6 +152,9 @@ export interface DuolingoRawUser {
   numSessionsCompleted?: number;
   streakFreezeCount?: number;
   weeklyXp?: number;
+  monthlyXp?: number;
+  learningLanguage?: string;
+  fromLanguage?: string;
   languages?: DuolingoLanguage[];
   tracking_properties?: DuolingoTrackingProperties;
   trackingProperties?: DuolingoTrackingProperties;

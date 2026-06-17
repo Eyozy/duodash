@@ -11,12 +11,13 @@ export function resolveCourses(rawData: DuolingoRawUser): Course[] {
     courses = rawData.courses
       .filter((c) => (c.xp || 0) > 0 || c.current_learning)
       .map(c => ({
-        title: c.title,
+        title: c.title || c.subject?.replace(/^\w/, s => s.toUpperCase()) || c.id,
         xp: c.xp,
         fromLanguage: c.fromLanguage,
         learningLanguage: c.learningLanguage,
         crowns: c.crowns || 0,
-        id: c.id
+        id: c.id,
+        subject: c.subject,
       }));
   }
 
@@ -74,16 +75,25 @@ export function resolveCourses(rawData: DuolingoRawUser): Course[] {
  * 解析当前学习的语言
  */
 export function resolveLearningLanguage(rawData: DuolingoRawUser, courses: Course[]): string {
-  if (rawData.language_data) {
-    const current = Object.values(rawData.language_data).find(l => l.current_learning);
-    return current?.language_string ?? courses[0]?.title ?? "None";
+  // 新接口顶层 learningLanguage 是语言代码，从 courses 中找对应名称
+  const langCode = rawData.learningLanguage
+    || rawData.currentCourse?.learningLanguage;
+
+  if (langCode) {
+    const matched = courses.find(c => c.learningLanguage === langCode || c.id === langCode);
+    if (matched) return matched.title;
   }
 
-  if (rawData.currentCourse) {
+  if (rawData.language_data) {
+    const current = Object.values(rawData.language_data).find(l => l.current_learning);
+    return current?.language_string ?? courses[0]?.title ?? 'None';
+  }
+
+  if (rawData.currentCourse?.title) {
     return rawData.currentCourse.title;
   }
 
-  return courses[0]?.title ?? "None";
+  return courses[0]?.title ?? 'None';
 }
 
 /**
