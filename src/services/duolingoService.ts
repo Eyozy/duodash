@@ -78,7 +78,7 @@ export function transformDuolingoData(rawData: DuolingoRawUser, timeZone?: strin
     streakExtendedToday,
     streakExtendedTime,
     weeklyXp: rawData.weeklyXp,
-    numSessionsCompleted: rawData.numSessionsCompleted,
+    sessionCount: rawData.sessionCount,
     streakFreezeCount: rawData.streakFreezeCount
   };
 }

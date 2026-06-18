@@ -34,7 +34,7 @@ export interface UserData {
   streakExtendedToday?: boolean;
   streakExtendedTime?: string;
   // 统计数据
-  numSessionsCompleted?: number;
+  sessionCount?: number;
   streakFreezeCount?: number;
   weeklyXp?: number;
 }
@@ -149,7 +149,7 @@ export interface DuolingoRawUser {
   xp_today?: number;
   streak_extended_today?: boolean;
   streakExtendedToday?: boolean;
-  numSessionsCompleted?: number;
+  sessionCount?: number;
   streakFreezeCount?: number;
   weeklyXp?: number;
   monthlyXp?: number;

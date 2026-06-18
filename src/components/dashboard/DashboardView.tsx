@@ -37,9 +37,9 @@ const STAT_CARDS = [
   {
     icon: <CourseIcon className="w-5 h-5 text-brand-500" />,
     iconBgClass: 'bg-brand-50',
-    label: '学习课程',
+    label: '累计课次',
     colorClass: 'text-brand-500',
-    value: (data: UserData) => data.courses.length,
+    value: (data: UserData) => data.sessionCount?.toLocaleString() ?? '—',
   },
   {
     icon: <AccountAgeIcon className="w-5 h-5 text-purple-500" />,
