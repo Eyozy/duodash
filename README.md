@@ -2,6 +2,8 @@
 
 Duolingo 学习数据仪表盘，直观展示你的 XP 趋势、连胜记录、成就进度，并提供 AI 学习点评和分享卡片功能。
 
+> **特别鸣谢**：感谢 [小众软件](https://www.appinn.com/duodash/) 的文章推荐。
+
 ## 功能特性
 
 - **今日概览**：显示今日 XP、课程数、连胜天数和学习分钟数
@@ -246,6 +248,7 @@ Intl.DateTimeFormat().resolvedOptions().timeZone
 
 ## 致谢
 
+- [小众软件 (Appinn)](https://www.appinn.com/duodash/) — 推荐与支持
 - [Duolingo](https://www.duolingo.com/) — 数据来源
 - [Astro](https://astro.build/) — Web 框架
 - [Recharts](https://recharts.org/) — 图表库
