@@ -1,12 +1,19 @@
 import dns from 'node:dns';
-import { defineConfig } from 'astro/config';
+import { defineConfig, sessionDrivers } from 'astro/config';
 import react from '@astrojs/react';
+import cloudflare from '@astrojs/cloudflare';
 import vercel from '@astrojs/vercel';
 import netlify from '@astrojs/netlify';
+import { loadEnv } from 'vite';
 
 dns.setDefaultResultOrder('verbatim');
 const DEFAULT_DEV_HOST = 'localhost';
 const DEFAULT_DEV_PORT = 4321;
+
+const loadedEnv = loadEnv(process.env.NODE_ENV === 'production' ? 'production' : 'development', process.cwd(), '');
+for (const [key, value] of Object.entries(loadedEnv)) {
+  if (process.env[key] === undefined) process.env[key] = value;
+}
 
 function getDevServerConfig(env = process.env) {
   const host = env.DEV_HOST || DEFAULT_DEV_HOST;
@@ -22,6 +29,10 @@ function getDevServerConfig(env = process.env) {
 const devServerConfig = getDevServerConfig();
 
 function getAdapter(env = process.env) {
+  if (env.DEPLOY_TARGET === 'cloudflare') {
+    return cloudflare({ imageService: 'passthrough' });
+  }
+
   if (env.NETLIFY) {
     return netlify();
   }
@@ -33,9 +44,22 @@ function getAdapter(env = process.env) {
   });
 }
 
+function getSessionConfig(env = process.env) {
+  if (env.DEPLOY_TARGET === 'cloudflare') {
+    // The app does not use Astro sessions. Keep the adapter from requiring a
+    // Cloudflare KV namespace while retaining a valid runtime driver.
+    return {
+      driver: sessionDrivers.memory()
+    };
+  }
+
+  return undefined;
+}
+
 export default defineConfig({
   output: 'server',
   adapter: getAdapter(),
+  session: getSessionConfig(),
   devToolbar: {
     enabled: false
   },

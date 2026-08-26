@@ -17,6 +17,28 @@ const COMPRESSIBLE_TYPES = new Set([
   'application/xhtml+xml',
 ]);
 
+const SECURITY_HEADERS: Record<string, string> = {
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://www.duolingo.com https://*.openai.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+};
+
+function withSecurityHeaders(response: Response): Response {
+  const headers = new Headers(response.headers);
+
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    if (!headers.has(key)) headers.set(key, value);
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 function isCompressible(contentType: string | null): boolean {
   if (!contentType) return false;
   const type = contentType.split(';', 1)[0].trim().toLowerCase();
@@ -41,7 +63,7 @@ function isInCompressRange(size: number): boolean {
 
 export const onRequest: MiddlewareHandler = async function (context, next) {
   const { request } = context;
-  const response = await next();
+  const response = withSecurityHeaders(await next());
   const method = request.method;
 
   if (method !== 'GET' && method !== 'HEAD') return response;
