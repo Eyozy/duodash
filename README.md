@@ -169,7 +169,7 @@ document.cookie.match(/jwt_token=([^;]+)/)[1]
 
 ## 部署
 
-项目会自动检测部署环境：存在 `NETLIFY` 环境变量时使用 Netlify adapter，否则使用 Vercel adapter，同一套代码无需修改即可部署到两个平台。
+项目支持 Vercel、Netlify 和 Cloudflare Workers。默认使用 Vercel adapter；存在 `NETLIFY` 环境变量时使用 Netlify adapter；设置 `DEPLOY_TARGET=cloudflare` 时使用 Cloudflare Workers adapter。
 
 ### Vercel
 
@@ -182,6 +182,65 @@ document.cookie.match(/jwt_token=([^;]+)/)[1]
 1. 登录 [Netlify](https://netlify.com/) → 导入 GitHub 仓库
 2. Build command: `npm run build`，Publish directory: `dist`
 3. 配置环境变量 → 部署
+
+### Cloudflare Workers
+
+项目以 Cloudflare Workers SSR 方式部署，不使用 Cloudflare Pages。仓库已包含 Cloudflare adapter、Wrangler 配置和对应的构建脚本。
+
+#### 部署
+
+```bash
+npm install
+npx wrangler login
+npm run deploy:cloudflare
+```
+
+`npm run deploy:cloudflare` 会先执行 `npm run build:cloudflare`，再运行 `wrangler deploy`。部署完成后，终端会输出 `workers.dev` 访问地址。
+
+正式部署前可以先检查构建产物和绑定配置：
+
+```bash
+npm run build:cloudflare
+npx wrangler deploy --dry-run
+```
+
+Cloudflare 部署不要使用普通的 `npm run build`，因为该命令默认使用 Vercel adapter。
+
+#### 配置环境变量
+
+不要将 `.env`、`.env.local`、`.dev.vars` 或任何 API Key 提交到 Git。非敏感配置可以在 Cloudflare Dashboard 的 Worker → Settings → Variables 中添加，也可以在本地 `wrangler.jsonc` 的 `vars` 字段中配置。若修改了 `wrangler.jsonc`，请不要提交包含个人配置的版本：
+
+```json
+"vars": {
+  "DUOLINGO_USERNAME": "your_duolingo_username",
+  "AI_PROVIDER": "deepseek",
+  "AI_MODEL": "deepseek-chat",
+  "AI_BASE_URL": ""
+}
+```
+
+敏感配置使用 Wrangler Secret。根据 `AI_PROVIDER` 选择对应的 API Key：
+
+```bash
+npx wrangler secret put DUOLINGO_JWT
+npx wrangler secret put API_SECRET_TOKEN
+npx wrangler secret put DEEPSEEK_API_KEY
+```
+
+#### 本地调试 Worker
+
+使用 `.dev.vars` 提供本地 Worker 运行时变量：
+
+```bash
+cp .env.example .dev.vars
+# 编辑 .dev.vars，填入实际配置
+npm run build:cloudflare
+npx wrangler dev
+```
+
+`.dev.vars` 已被 `.gitignore` 忽略。普通 Astro 本地开发仍使用 `.env.local` 和 `npm run dev`。
+
+如果修改了环境变量或代码，重新执行 `npm run deploy:cloudflare` 即可发布新版本。
 
 ## 数据来源
 
@@ -210,7 +269,7 @@ DuoDash 通过以下 Duolingo 非官方接口获取数据：
 
 | 层 | 策略 |
 | --- | --- |
-| 服务端 | 内存缓存，TTL 5 分钟，跨天或超时后失效 |
+| 服务端 | 内存缓存，TTL 30 分钟，跨天或超时后失效；Cloudflare 多实例下为 best-effort 缓存 |
 | 客户端 | `localStorage`，命中时立即渲染，后台静默刷新；跨天后自动失效 |
 
 > 避免频繁点击刷新，以免触发 Duolingo API 限流。

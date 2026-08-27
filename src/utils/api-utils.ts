@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
 export function getEnv(key: string): string {
-  return process.env[key] || (import.meta.env as Record<string, string>)[key] || '';
+  return process.env[key] || '';
 }
 
 export function jsonResponse(

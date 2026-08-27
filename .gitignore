@@ -13,6 +13,11 @@ dist-ssr
 .astro
 .vercel
 *.local
+.env
+.env.*
+!.env.example
+.dev.vars*
+.wrangler/
 .claude
 
 # Editor directories and files
